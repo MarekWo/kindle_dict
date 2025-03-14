@@ -80,4 +80,4 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## Wsparcie techniczne
 
-W przypadku problemów, proszę o kontakt [email@example.com](mailto:email@example.com).
+W przypadku problemów, proszę o kontakt [marek@wojtaszek.it](mailto:marek@wojtaszek.it).
