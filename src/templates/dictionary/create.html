@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% comment %} kindle_dict\src\templates\includes\footer.html {% endcomment %}
+{% block title %}Utwórz słownik{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Utwórz nowy słownik</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Format pliku słownika</h5>
+                </div>
+                <div class="card-body">
+                    <p>Używaj następującego formatu dla zawartości słownika:</p>
+                    <pre class="bg-light p-3 rounded">
+~Słowo_główne    {odmiana1, odmiana2} Definicja słowa głównego.
+
++Podsłowo    {odmiana1, odmiana2} Definicja podsłowa.
+
+Proste_słowo    {odmiana1, odmiana2} Definicja prostego słowa.</pre>
+                    <p><strong>Legenda:</strong></p>
+                    <ul>
+                        <li><code>~</code> oznacza grupę haseł</li>
+                        <li><code>+</code> oznacza hasło należące do poprzedzającej grupy</li>
+                        <li>Słowa bez prefiksu są podstawowymi hasłami słownika</li>
+                        <li>Odmiany słów umieszczaj w nawiasach klamrowych <code>{}</code> oddzielone przecinkami</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label_tag }}
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                            {% endif %}
+                            {% if form.name.help_text %}
+                                <div class="form-text">{{ form.name.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description.label_tag }}
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+                            {% endif %}
+                            {% if form.description.help_text %}
+                                <div class="form-text">{{ form.description.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.creator_name.label_tag }}
+                            {{ form.creator_name }}
+                            {% if form.creator_name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.creator_name.errors }}</div>
+                            {% endif %}
+                            {% if form.creator_name.help_text %}
+                                <div class="form-text">{{ form.creator_name.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.language_code.label_tag }}
+                            {{ form.language_code }}
+                            {% if form.language_code.errors %}
+                                <div class="invalid-feedback d-block">{{ form.language_code.errors }}</div>
+                            {% endif %}
+                            {% if form.language_code.help_text %}
+                                <div class="form-text">{{ form.language_code.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.is_public }}
+                            {{ form.is_public.label_tag }}
+                            {% if form.is_public.errors %}
+                                <div class="invalid-feedback d-block">{{ form.is_public.errors }}</div>
+                            {% endif %}
+                            {% if form.is_public.help_text %}
+                                <div class="form-text">{{ form.is_public.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.content.label_tag }}
+                            {{ form.content }}
+                            {% if form.content.errors %}
+                                <div class="invalid-feedback d-block">{{ form.content.errors }}</div>
+                            {% endif %}
+                            {% if form.content.help_text %}
+                                <div class="form-text">{{ form.content.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.source_file.label_tag }}
+                            {{ form.source_file }}
+                            {% if form.source_file.errors %}
+                                <div class="invalid-feedback d-block">{{ form.source_file.errors }}</div>
+                            {% endif %}
+                            {% if form.source_file.help_text %}
+                                <div class="form-text">{{ form.source_file.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Utwórz słownik</button>
+                            <a href="{% url 'home' %}" class="btn btn-outline-secondary">Anuluj</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

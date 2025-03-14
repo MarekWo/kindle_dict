@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/home.html {% endcomment %}
+{% block title %}Kreator Słownika Kindle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row my-5">
+        <div class="col-lg-8 mx-auto text-center">
+            <h1 class="display-4">Kreator Słownika Kindle</h1>
+            <p class="lead">Twórz własne słowniki Kindle za pomocą prostego tekstu.</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Stwórz nowy słownik</h5>
+                    <p class="card-text">Utwórz własny słownik Kindle przez wprowadzenie tekstu lub przesłanie pliku tekstowego. Wygenerowane pliki będą gotowe do wgrania na twoje urządzenie Kindle.</p>
+                    <a href="{% url 'dictionary:create' %}" class="btn btn-primary">Utwórz słownik</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Przeglądaj istniejące słowniki</h5>
+                    <p class="card-text">Przeglądaj publiczne słowniki stworzone przez innych użytkowników. Możesz pobrać je i używać na swoim urządzeniu Kindle.</p>
+                    <a href="{% url 'dictionary:list' %}" class="btn btn-secondary">Przeglądaj słowniki</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Jak to działa?</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Wprowadź słowa i ich definicje w prostym formacie tekstowym lub prześlij plik tekstowy.</li>
+                        <li>Nasz system przetworzy dane i wygeneruje wszystkie potrzebne pliki słownika.</li>
+                        <li>Pobierz pliki MOBI lub pełen pakiet ZIP i skopiuj na swoje urządzenie Kindle.</li>
+                    </ol>
+                    
+                    <h6 class="mt-4">Format tekstu:</h6>
+                    <pre class="bg-light p-3 rounded">
+~Słowo_główne    {odmiana1, odmiana2} Definicja słowa głównego.
+
++Podsłowo    {odmiana1, odmiana2} Definicja podsłowa.
+
+Proste_słowo    {odmiana1, odmiana2} Definicja prostego słowa.</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

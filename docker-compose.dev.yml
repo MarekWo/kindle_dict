@@ -1,0 +1,80 @@
+# kindle_dict\docker-compose.dev.yml
+
+services:
+  # Usługa Django
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: kindle_dict_web
+    volumes:
+      - ./src:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=kindle_dict.settings.dev
+    restart: on-failure
+    command: >
+      bash -c "python manage.py migrate &&
+               python manage.py runserver 0.0.0.0:8000"
+
+  # Baza danych PostgreSQL
+  db:
+    image: postgres:15
+    container_name: kindle_dict_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file: .env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "5432:5432"
+
+  # Redis do obsługi Celery
+  redis:
+    image: redis:7
+    container_name: kindle_dict_redis
+    ports:
+      - "6379:6379"
+
+  # Celery worker
+  celery:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: kindle_dict_celery
+    volumes:
+      - ./src:/app
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=kindle_dict.settings.dev
+    command: celery -A kindle_dict worker -l info
+
+  # Celery beat (opcjonalnie - do zaplanowanych zadań)
+  celery_beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: kindle_dict_celery_beat
+    volumes:
+      - ./src:/app
+    depends_on:
+      - db
+      - redis
+      - celery
+    env_file: .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=kindle_dict.settings.dev
+    command: celery -A kindle_dict beat -l info
+
+volumes:
+  postgres_data:
