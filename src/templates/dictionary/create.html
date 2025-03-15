@@ -36,81 +36,99 @@ Proste_słowo    {odmiana1, odmiana2} Definicja prostego słowa.</pre>
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         
-                        <div class="mb-3">
-                            {{ form.name.label_tag }}
-                            {{ form.name }}
-                            {% if form.name.errors %}
-                                <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
-                            {% endif %}
-                            {% if form.name.help_text %}
-                                <div class="form-text">{{ form.name.help_text }}</div>
-                            {% endif %}
+                        <div class="mb-3 row">
+                            <label for="{{ form.name.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.name.label }}</label>
+                            <div class="col-sm-9">
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                                {% endif %}
+                                {% if form.name.help_text %}
+                                    <div class="form-text">{{ form.name.help_text }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.description.label_tag }}
-                            {{ form.description }}
-                            {% if form.description.errors %}
-                                <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
-                            {% endif %}
-                            {% if form.description.help_text %}
-                                <div class="form-text">{{ form.description.help_text }}</div>
-                            {% endif %}
+                        <div class="mb-3 row">
+                            <label for="{{ form.description.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.description.label }}</label>
+                            <div class="col-sm-9">
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+                                {% endif %}
+                                {% if form.description.help_text %}
+                                    <div class="form-text">{{ form.description.help_text }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.creator_name.label_tag }}
-                            {{ form.creator_name }}
-                            {% if form.creator_name.errors %}
-                                <div class="invalid-feedback d-block">{{ form.creator_name.errors }}</div>
-                            {% endif %}
-                            {% if form.creator_name.help_text %}
-                                <div class="form-text">{{ form.creator_name.help_text }}</div>
-                            {% endif %}
+                        <div class="mb-3 row">
+                            <label for="{{ form.creator_name.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.creator_name.label }}</label>
+                            <div class="col-sm-9">
+                                {{ form.creator_name }}
+                                {% if form.creator_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.creator_name.errors }}</div>
+                                {% endif %}
+                                {% if form.creator_name.help_text %}
+                                    <div class="form-text">{{ form.creator_name.help_text }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.language_code.label_tag }}
-                            {{ form.language_code }}
-                            {% if form.language_code.errors %}
-                                <div class="invalid-feedback d-block">{{ form.language_code.errors }}</div>
-                            {% endif %}
-                            {% if form.language_code.help_text %}
-                                <div class="form-text">{{ form.language_code.help_text }}</div>
-                            {% endif %}
+                        <div class="mb-3 row">
+                            <label for="{{ form.language_code.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.language_code.label }}</label>
+                            <div class="col-sm-9">
+                                {{ form.language_code }}
+                                {% if form.language_code.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.language_code.errors }}</div>
+                                {% endif %}
+                                {% if form.language_code.help_text %}
+                                    <div class="form-text">{{ form.language_code.help_text }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                         
-                        <div class="mb-3 form-check">
-                            {{ form.is_public }}
-                            {{ form.is_public.label_tag }}
-                            {% if form.is_public.errors %}
-                                <div class="invalid-feedback d-block">{{ form.is_public.errors }}</div>
-                            {% endif %}
-                            {% if form.is_public.help_text %}
-                                <div class="form-text">{{ form.is_public.help_text }}</div>
-                            {% endif %}
+                        <div class="mb-3 row">
+                            <div class="col-sm-9 offset-sm-3">
+                                <div class="form-check">
+                                    {{ form.is_public }}
+                                    <label class="form-check-label" for="{{ form.is_public.id_for_label }}">
+                                        {{ form.is_public.label }}
+                                    </label>
+                                    {% if form.is_public.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.is_public.errors }}</div>
+                                    {% endif %}
+                                    {% if form.is_public.help_text %}
+                                        <div class="form-text">{{ form.is_public.help_text }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.content.label_tag }}
-                            {{ form.content }}
-                            {% if form.content.errors %}
-                                <div class="invalid-feedback d-block">{{ form.content.errors }}</div>
-                            {% endif %}
-                            {% if form.content.help_text %}
-                                <div class="form-text">{{ form.content.help_text }}</div>
-                            {% endif %}
+                        <div class="mb-3 row">
+                            <label for="{{ form.content.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.content.label }}</label>
+                            <div class="col-sm-9">
+                                {{ form.content }}
+                                {% if form.content.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.content.errors }}</div>
+                                {% endif %}
+                                {% if form.content.help_text %}
+                                    <div class="form-text">{{ form.content.help_text }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.source_file.label_tag }}
-                            {{ form.source_file }}
-                            {% if form.source_file.errors %}
-                                <div class="invalid-feedback d-block">{{ form.source_file.errors }}</div>
-                            {% endif %}
-                            {% if form.source_file.help_text %}
-                                <div class="form-text">{{ form.source_file.help_text }}</div>
-                            {% endif %}
+                        <div class="mb-3 row">
+                            <label for="{{ form.source_file.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.source_file.label }}</label>
+                            <div class="col-sm-9">
+                                {{ form.source_file }}
+                                {% if form.source_file.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.source_file.errors }}</div>
+                                {% endif %}
+                                {% if form.source_file.help_text %}
+                                    <div class="form-text">{{ form.source_file.help_text }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                         
                         {% if form.non_field_errors %}
@@ -121,9 +139,11 @@ Proste_słowo    {odmiana1, odmiana2} Definicja prostego słowa.</pre>
                             </div>
                         {% endif %}
                         
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Utwórz słownik</button>
-                            <a href="{% url 'home' %}" class="btn btn-outline-secondary">Anuluj</a>
+                        <div class="row mt-4">
+                            <div class="col-sm-9 offset-sm-3">
+                                <button type="submit" class="btn btn-primary">Utwórz słownik</button>
+                                <a href="{% url 'home' %}" class="btn btn-outline-secondary ms-2">Anuluj</a>
+                            </div>
                         </div>
                     </form>
                 </div>
