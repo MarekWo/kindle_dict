@@ -20,7 +20,7 @@ Aplikacja webowa do tworzenia słowników dla urządzeń Kindle, zbudowana na Dj
 1. Sklonuj repozytorium:
 
 ```bash
-git clone https://github.com/yourusername/kindle_dict.git
+git clone https://github.com/MarekWo/kindle_dict.git
 cd kindle_dict
 ```
 
@@ -78,6 +78,6 @@ docker-compose -f docker-compose.dev.yml exec web python manage.py test
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-## Wsparcie techniczne
+## Wsparcie techniczne`
 
 W przypadku problemów, proszę o kontakt [marek@wojtaszek.it](mailto:marek@wojtaszek.it).
