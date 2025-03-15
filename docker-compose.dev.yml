@@ -9,6 +9,7 @@ services:
     container_name: kindle_dict_web
     volumes:
       - ./src:/app
+      - ./src/media:/app/media  # Współdzielony katalog media
     ports:
       - "8000:8000"
     depends_on:
@@ -51,13 +52,19 @@ services:
     container_name: kindle_dict_celery
     volumes:
       - ./src:/app
+      - ./src/media:/app/media  # Współdzielony katalog media
     depends_on:
       - db
       - redis
     env_file: .env
     environment:
       - DJANGO_SETTINGS_MODULE=kindle_dict.settings.dev
-    command: celery -A kindle_dict worker -l info
+      - DISPLAY=
+      - WINEDEBUG=-all
+      - WINEDLLOVERRIDES=mscoree,mshtml=
+    # Użycie privileged mode może pomóc z instrukcjami uprzywilejowanymi
+    privileged: true
+    command: celery -A kindle_dict worker -l info --pool=solo --concurrency=1
 
   # Celery beat (opcjonalnie - do zaplanowanych zadań)
   celery_beat:

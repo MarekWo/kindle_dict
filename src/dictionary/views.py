@@ -41,12 +41,20 @@ class DictionaryDetailView(DetailView):
         # Add any additional data here
         return context
 
-class DictionaryCreateView(CreateView):
+class DictionaryCreateView(LoginRequiredMixin, CreateView):
     """View to create a new dictionary"""
     model = Dictionary
     form_class = DictionaryForm
     template_name = 'dictionary/create.html'
     success_url = reverse_lazy('dictionary:list')
+    login_url = reverse_lazy('login')
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check if user has Dictionary Creator role"""
+        if not request.user.groups.filter(name='Dictionary Creator').exists():
+            messages.error(request, _("Nie masz uprawnień do tworzenia słowników."))
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
         """Process the form if it's valid"""
@@ -92,6 +100,13 @@ class DictionarySuggestionCreateView(CreateView):
     form_class = DictionarySuggestionForm
     template_name = 'dictionary/suggest.html'
     success_url = reverse_lazy('home')
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check if user is not authenticated"""
+        if request.user.is_authenticated:
+            messages.info(request, _("Zalogowani użytkownicy nie mogą proponować słowników. Skontaktuj się z administratorem, aby uzyskać rolę Dictionary Creator."))
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
         """Process the form if it's valid"""

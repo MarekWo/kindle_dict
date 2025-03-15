@@ -102,4 +102,4 @@ class DictionarySuggestionForm(forms.ModelForm):
         if not content and not source_file:
             raise forms.ValidationError(_("Musisz albo podać zawartość, albo przesłać plik."))
         
-        return cleane
+        return cleaned_data

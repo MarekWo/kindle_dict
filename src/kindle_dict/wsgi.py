@@ -1,3 +1,5 @@
+# src\kindle_dict\wsgi.py
+
 """
 WSGI config for kindle_dict project.
 

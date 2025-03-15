@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% comment %} kindle_dict/src/templates/home.html {% endcomment %}
-{% block title %}Kreator Słownika Kindle{% endblock %}
+{% block title %}Biblioteka Słowników Kindle{% endblock %}
 
 {% block content %}
 <div class="container">
-    <div class="row my-5">
+    <div class="row my-3">
         <div class="col-lg-8 mx-auto text-center">
-            <h1 class="display-4">Kreator Słownika Kindle</h1>
+            <h1 class="display-4">Biblioteka Słowników Kindle</h1>
             <p class="lead">Twórz własne słowniki Kindle za pomocą prostego tekstu.</p>
         </div>
     </div>
@@ -17,7 +17,16 @@
                 <div class="card-body">
                     <h5 class="card-title">Stwórz nowy słownik</h5>
                     <p class="card-text">Utwórz własny słownik Kindle przez wprowadzenie tekstu lub przesłanie pliku tekstowego. Wygenerowane pliki będą gotowe do wgrania na twoje urządzenie Kindle.</p>
-                    <a href="{% url 'dictionary:create' %}" class="btn btn-primary">Utwórz słownik</a>
+                    {% if user.is_authenticated and 'Dictionary Creator' in user.groups.all|stringformat:'s' %}
+                        <a href="{% url 'dictionary:create' %}" class="btn btn-primary">Utwórz słownik</a>
+                    {% elif user.is_authenticated %}
+                        <div class="alert alert-info">
+                            Tworzenie słowników jest dostępne tylko dla użytkowników z rolą Dictionary Creator.
+                        </div>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-primary">Zaloguj się, aby utworzyć słownik</a>
+                        <a href="{% url 'dictionary:suggest' %}" class="btn btn-secondary">Zaproponuj słownik</a>
+                    {% endif %}
                 </div>
             </div>
         </div>

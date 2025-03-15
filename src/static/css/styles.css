@@ -1,0 +1,8 @@
+/* src/static/css/styles.css */
+#Title { font-weight: 800; font-size: 3.5em; text-align: center; }
+p { margin-bottom: 12;} 
+div { margin-bottom: 12; }
+h2 { margin-bottom: 10; font-weight: 600; font-size: x-large;}
+h3 { margin-bottom: 10; font-weight: 600; font-size: large;}
+.div_about { margin: 5; text-align: left; font-size: 0.9em}
+.idx_footer { color: grey; font-size: 0.8em; font-style: italic; margin-top: 15px; border-top: 2px grey solid; padding: 5px }

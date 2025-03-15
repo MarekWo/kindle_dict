@@ -1,3 +1,5 @@
+# src\dictionary\signals.py
+
 """
 Signal handlers for the Dictionary app.
 """

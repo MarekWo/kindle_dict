@@ -7,7 +7,7 @@ import os
 
 def run_kindlegen(opf_file, output_file=None):
     """
-    Run kindlegen.exe through Wine, redirecting stderr to /dev/null.
+    Run kindlegen.exe through Wine in headless mode, capturing both stdout and stderr.
     
     Args:
         opf_file: Path to the .opf file
@@ -16,34 +16,73 @@ def run_kindlegen(opf_file, output_file=None):
     Returns:
         True if successful, False otherwise
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # Construct command
-    command = ['wine', os.path.join(os.path.dirname(__file__), 'kindlegen.exe')]
+    kindlegen_path = os.path.join(os.path.dirname(__file__), 'kindlegen.exe')
+    
+    # Przygotowanie środowiska dla Wine
+    env = os.environ.copy()
+    env['DISPLAY'] = '' # Wyłączenie próby połączenia z serwerem X
+    env['WINEDEBUG'] = '-all' # Wyłączenie debugowania Wine
+    env['WINEDLLOVERRIDES'] = 'mscoree,mshtml=' # Wyłączenie niektórych DLL
+    
+    # Użycie wine64 zamiast wine, jeśli dostępne
+    wine_cmd = 'wine'
+    try:
+        # Sprawdź, czy wine64 jest dostępne
+        subprocess.run(['which', 'wine64'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        wine_cmd = 'wine64'
+        logger.info("Using wine64 command")
+    except:
+        logger.info("Using wine command")
+    
+    command = [wine_cmd, kindlegen_path]
     command.append(opf_file)
     
     if output_file:
         command.extend(['-o', output_file])
     
+    logger.info(f"Running kindlegen command: {' '.join(command)}")
+    logger.info(f"Working directory: {os.getcwd()}")
+    logger.info(f"Kindlegen path exists: {os.path.exists(kindlegen_path)}")
+    
     try:
-        # Run command and redirect stderr to /dev/null
-        with open(os.devnull, 'w') as devnull:
-            result = subprocess.run(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=devnull,
-                text=True,
-                check=False
-            )
+        # Run command with modified environment and capture both stdout and stderr
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+            env=env
+        )
+        
+        # Log the output
+        logger.info(f"Kindlegen stdout: {result.stdout}")
+        if result.stderr:
+            logger.warning(f"Kindlegen stderr: {result.stderr}")
+        
+        logger.info(f"Kindlegen return code: {result.returncode}")
         
         # Check if output file was created
         if result.returncode <= 1:  # 0 = success, 1 = success with warnings
-            print(result.stdout)
-            return True
+            mobi_file = output_file if output_file else os.path.splitext(opf_file)[0] + '.mobi'
+            mobi_path = os.path.join(os.path.dirname(opf_file), mobi_file)
+            
+            if os.path.exists(mobi_path):
+                logger.info(f"Successfully created MOBI file: {mobi_path}")
+                return True
+            else:
+                logger.error(f"Kindlegen reported success but MOBI file not found at: {mobi_path}")
+                return False
         else:
-            print(f"Error running kindlegen: {result.stdout}")
+            logger.error(f"Error running kindlegen (code {result.returncode}): {result.stdout}")
             return False
     
     except Exception as e:
-        print(f"Exception running kindlegen: {str(e)}")
+        logger.error(f"Exception running kindlegen: {str(e)}", exc_info=True)
         return False
 
 if __name__ == "__main__":

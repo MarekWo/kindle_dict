@@ -5,23 +5,37 @@ FROM python:3.11-slim
 # Ustawienie zmiennych środowiskowych
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+# Ustawienie WINEARCH na win32 dla prawidłowej konfiguracji Wine
+ENV WINEARCH=win32
+ENV WINEPREFIX=/root/.wine32
+# Wyłączenie debugowania Wine i interfejsu graficznego
+ENV WINEDEBUG=-all
+ENV DISPLAY=
 
 # Dodanie architektury i386 dla obsługi aplikacji 32-bitowych
 RUN dpkg --add-architecture i386
 
-# Instalacja wine do uruchamiania kindlegen.exe wraz z zależnościami 32-bitowymi
+# Instalacja wine do uruchamiania kindlegen.exe wraz z niezbędnymi zależnościami
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wine \
     wine32 \
-    wine64 \
-    libwine \
-    libwine:i386 \
-    fonts-wine \
+    xvfb \
     default-libmysqlclient-dev \
     build-essential \
     libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Inicjalizacja Wine w trybie headless (aby uniknąć problemów przy pierwszym uruchomieniu)
+RUN xvfb-run wine wineboot --init || true
+
+# Tworzenie skryptu pomocniczego do uruchamiania kindlegen
+RUN echo '#!/bin/bash\n\
+cd "$(dirname "$1")"\n\
+filename="$(basename "$1")"\n\
+DISPLAY="" WINEDEBUG="-all" WINEDLLOVERRIDES="mscoree,mshtml=" wine /app/tools/kindlegen.exe "$filename" $2 $3 $4 $5\n\
+exit $?\n\
+' > /usr/local/bin/kindlegen && chmod +x /usr/local/bin/kindlegen
 
 # Ustawienie katalogu roboczego
 WORKDIR /app
@@ -36,6 +50,7 @@ COPY ./src /app/
 # Tworzenie użytkownika nieroot
 RUN useradd --create-home appuser
 RUN chown -R appuser:appuser /app
+RUN chmod +rx /usr/local/bin/kindlegen
 USER appuser
 
 # Uruchomienie serwera deweloperskiego
