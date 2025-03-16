@@ -5,19 +5,22 @@ Views for the Dictionary app.
 """
 
 import os
+import json
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, DetailView, CreateView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
 
-from .models import Dictionary, DictionarySuggestion
-from .forms import DictionaryForm, DictionarySuggestionForm
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration
+from .forms import DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm
 from .tasks import process_dictionary
+from .email_utils import send_test_email
 
 class DictionaryListView(ListView):
     """View to display a list of public dictionaries"""
@@ -50,11 +53,24 @@ class DictionaryCreateView(LoginRequiredMixin, CreateView):
     login_url = reverse_lazy('login')
     
     def dispatch(self, request, *args, **kwargs):
-        """Check if user has Dictionary Creator role"""
-        if not request.user.groups.filter(name='Dictionary Creator').exists():
+        """Check if user has Dictionary Creator or Dictionary Admin role"""
+        if not (request.user.groups.filter(name='Dictionary Creator').exists() or 
+                request.user.groups.filter(name='Dictionary Admin').exists() or
+                request.user.is_superuser):
             messages.error(request, _("Nie masz uprawnień do tworzenia słowników."))
             return redirect('home')
         return super().dispatch(request, *args, **kwargs)
+    
+    def get_initial(self):
+        """Set initial values for the form"""
+        initial = super().get_initial()
+        if self.request.user.is_authenticated:
+            # Set creator_name to the user's full name
+            user = self.request.user
+            full_name = f"{user.first_name} {user.last_name}".strip()
+            if full_name:  # Only set if the user has a name
+                initial['creator_name'] = full_name
+        return initial
     
     def form_valid(self, form):
         """Process the form if it's valid"""
@@ -167,5 +183,131 @@ def dictionary_download(request, pk, file_type):
     
     # Return the file as a response
     response = FileResponse(open(file_field.path, 'rb'))
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Prawidłowe kodowanie nazwy pliku w nagłówku Content-Disposition
+    # Obsługa znaków specjalnych zgodnie z RFC 5987
+    import urllib.parse
+    encoded_filename = urllib.parse.quote(filename)
+    response['Content-Disposition'] = f'attachment; filename="{encoded_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+    
     return response
+
+class SMTPConfigurationView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """View to configure SMTP settings"""
+    model = SMTPConfiguration
+    form_class = SMTPConfigurationForm
+    template_name = 'dictionary/smtp_config.html'
+    success_url = reverse_lazy('dictionary:smtp_config')
+    
+    def test_func(self):
+        """Only allow superusers to access this view"""
+        return self.request.user.is_superuser
+    
+    def get_object(self, queryset=None):
+        """Get the SMTP configuration object or create a new one if it doesn't exist"""
+        config = SMTPConfiguration.objects.first()
+        if not config:
+            # Tworzymy obiekt, ale nie zapisujemy go jeszcze - zostanie zapisany przez formularz
+            config = SMTPConfiguration(
+                host='smtp.example.com',
+                port=587,
+                encryption='tls',
+                auto_tls=True,
+                authentication=True,
+                username='user@example.com',
+                password='password',
+                from_email='noreply@example.com',
+                from_name='Kindle Dictionary Creator'
+            )
+        return config
+    
+    def form_valid(self, form):
+        """Process the form if it's valid"""
+        # Check if we need to send a test email
+        test_email = form.cleaned_data.get('test_email')
+        
+        # Sprawdź, czy hasło zostało wprowadzone
+        password = form.cleaned_data.get('password')
+        
+        # Zapisz obiekt, ale nie zapisuj pustego hasła
+        self.object = form.save(commit=False)
+        
+        # Jeśli hasło jest puste i obiekt już istnieje w bazie danych,
+        # zachowaj poprzednie hasło
+        if not password and self.object.pk:
+            # Pobierz aktualne hasło z bazy danych
+            current_config = SMTPConfiguration.objects.get(pk=self.object.pk)
+            self.object.password = current_config.password
+        
+        # Zapisz konfigurację
+        self.object.save()
+        
+        # Show success message
+        messages.success(self.request, _("Konfiguracja SMTP została zapisana."))
+        
+        # If a test email was provided, send it
+        if test_email:
+            success = send_test_email(test_email, self.object)
+            if success:
+                messages.success(self.request, _("Wiadomość testowa została wysłana."))
+            else:
+                messages.error(self.request, _("Nie udało się wysłać wiadomości testowej. Sprawdź konfigurację SMTP i logi serwera."))
+        
+        return redirect(self.get_success_url())
+
+def dictionary_delete(request, pk):
+    """View to delete a dictionary"""
+    # Get the dictionary object
+    dictionary = get_object_or_404(Dictionary, pk=pk)
+    
+    # Check if user has permission to delete dictionaries
+    if not (request.user.is_superuser or request.user.groups.filter(name='Dictionary Admin').exists()):
+        messages.error(request, _("Nie masz uprawnień do usuwania słowników."))
+        return redirect('dictionary:detail', pk=pk)
+    
+    if request.method == 'POST':
+        # Get the media path for the dictionary
+        media_path = os.path.join(settings.MEDIA_ROOT, 'dictionaries', str(dictionary.id))
+        
+        # Delete the dictionary from the database
+        dictionary.delete()
+        
+        # Delete the dictionary folder from the media directory
+        import shutil
+        if os.path.exists(media_path):
+            shutil.rmtree(media_path)
+        
+        messages.success(request, _("Słownik został pomyślnie usunięty."))
+        return redirect('dictionary:list')
+    
+    # If not POST, show confirmation page
+    return render(request, 'dictionary/delete_confirm.html', {'dictionary': dictionary})
+
+@user_passes_test(lambda u: u.is_superuser)
+def test_smtp_email(request):
+    """View to send a test email"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method is allowed'})
+    
+    try:
+        data = json.loads(request.body)
+        email = data.get('email')
+        
+        if not email:
+            return JsonResponse({'success': False, 'error': 'Email address is required'})
+        
+        # Get the SMTP configuration
+        config = SMTPConfiguration.objects.first()
+        if not config:
+            return JsonResponse({'success': False, 'error': 'SMTP configuration not found'})
+        
+        # Send the test email
+        success = send_test_email(email, config)
+        
+        if success:
+            return JsonResponse({'success': True, 'message': 'Test email sent successfully'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Failed to send test email'})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

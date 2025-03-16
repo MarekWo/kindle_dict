@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Konfiguracja SMTP" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1>{% trans "Konfiguracja SMTP" %}</h1>
+            <p class="lead">{% trans "Skonfiguruj ustawienia serwera SMTP do wysyłania wiadomości e-mail." %}</p>
+            
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">{% trans "Serwer SMTP" %}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.host.id_for_label }}" class="form-label">{{ form.host.label }}</label>
+                                    {{ form.host }}
+                                    {% if form.host.help_text %}
+                                        <div class="form-text">{{ form.host.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.host.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.host.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.encryption.label }}</label>
+                                    <div class="d-flex">
+                                        {% for radio in form.encryption %}
+                                            <div class="form-check me-4">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                    {{ radio.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if form.encryption.help_text %}
+                                        <div class="form-text">{{ form.encryption.help_text }}</div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        {% trans "W przypadku większości serwerów zalecana opcja to TLS. Jeśli dostawca SMTP oferuje zarówno szyfrowanie SSL, jak i TLS, zalecamy korzystanie z TLS." %}
+                                    </div>
+                                    {% if form.encryption.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.encryption.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.port.id_for_label }}" class="form-label">{{ form.port.label }}</label>
+                                    {{ form.port }}
+                                    {% if form.port.help_text %}
+                                        <div class="form-text">{{ form.port.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.port.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.port.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3 form-check">
+                                    {{ form.auto_tls }}
+                                    <label class="form-check-label" for="{{ form.auto_tls.id_for_label }}">
+                                        {{ form.auto_tls.label }}
+                                    </label>
+                                    {% if form.auto_tls.help_text %}
+                                        <div class="form-text">{{ form.auto_tls.help_text }}</div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        {% trans "Domyślnie szyfrowanie TLS jest używane automatycznie, jeśli serwer je obsługuje (ustawienie zalecane). W pewnych przypadkach z powodu błędnej konfiguracji serwera to ustawienie może powodować problemy i może wymagać wyłączenia." %}
+                                    </div>
+                                    {% if form.auto_tls.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.auto_tls.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">{% trans "Uwierzytelnianie" %}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3 form-check">
+                                    {{ form.authentication }}
+                                    <label class="form-check-label" for="{{ form.authentication.id_for_label }}">
+                                        {{ form.authentication.label }}
+                                    </label>
+                                    {% if form.authentication.help_text %}
+                                        <div class="form-text">{{ form.authentication.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.authentication.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.authentication.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3 auth-field">
+                                    <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
+                                    {{ form.username }}
+                                    {% if form.username.help_text %}
+                                        <div class="form-text">{{ form.username.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.username.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.username.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3 auth-field">
+                                    <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label }}</label>
+                                    {{ form.password }}
+                                    {% if form.password.help_text %}
+                                        <div class="form-text">{{ form.password.help_text }}</div>
+                                    {% endif %}
+                                    <div class="form-text text-info">
+                                        {% trans "Pozostaw puste, aby zachować aktualne hasło. Wypełnij tylko jeśli chcesz zmienić hasło." %}
+                                    </div>
+                                    {% if form.password.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.password.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">{% trans "Nadawca" %}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.from_email.id_for_label }}" class="form-label">{{ form.from_email.label }}</label>
+                                    {{ form.from_email }}
+                                    {% if form.from_email.help_text %}
+                                        <div class="form-text">{{ form.from_email.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.from_email.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.from_email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.from_name.id_for_label }}" class="form-label">{{ form.from_name.label }}</label>
+                                    {{ form.from_name }}
+                                    {% if form.from_name.help_text %}
+                                        <div class="form-text">{{ form.from_name.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.from_name.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.from_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">{% trans "Test konfiguracji" %}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>{% trans "Możesz wysłać wiadomość testową, aby sprawdzić poprawność konfiguracji SMTP." %}</p>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.test_email.id_for_label }}" class="form-label">{{ form.test_email.label }}</label>
+                                    {{ form.test_email }}
+                                    {% if form.test_email.help_text %}
+                                        <div class="form-text">{{ form.test_email.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.test_email.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.test_email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    {% trans "Wiadomość testowa zostanie wysłana po zapisaniu konfiguracji, jeśli podano adres e-mail do testu." %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">
+                                {% trans "Zapisz konfigurację" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle authentication fields visibility
+        const authCheckbox = document.getElementById('{{ form.authentication.id_for_label }}');
+        const authFields = document.querySelectorAll('.auth-field');
+        
+        function toggleAuthFields() {
+            authFields.forEach(field => {
+                field.style.display = authCheckbox.checked ? 'block' : 'none';
+            });
+        }
+        
+        // Initial state
+        toggleAuthFields();
+        
+        // Listen for changes
+        authCheckbox.addEventListener('change', toggleAuthFields);
+        
+        // Set default port based on encryption type
+        const encryptionRadios = document.querySelectorAll('input[name="{{ form.encryption.html_name }}"]');
+        const portInput = document.getElementById('{{ form.port.id_for_label }}');
+        
+        function setDefaultPort() {
+            // Find the selected encryption type
+            let selectedEncryption = '';
+            encryptionRadios.forEach(radio => {
+                if (radio.checked) {
+                    selectedEncryption = radio.value;
+                }
+            });
+            
+            // Set default port based on encryption type
+            switch (selectedEncryption) {
+                case 'none':
+                    portInput.value = '25';
+                    break;
+                case 'ssl':
+                    portInput.value = '465';
+                    break;
+                case 'tls':
+                    portInput.value = '587';
+                    break;
+            }
+        }
+        
+        // Listen for changes in encryption type
+        encryptionRadios.forEach(radio => {
+            radio.addEventListener('change', setDefaultPort);
+        });
+    });
+</script>
+{% endblock %}

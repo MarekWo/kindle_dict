@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% comment %} kindle_dict\src\templates\dictionary\delete_confirm.html {% endcomment %}
+{% block title %}Usuń słownik{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h1 class="card-title text-danger">Usuń słownik</h1>
+                    
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">Uwaga!</h5>
+                        <p>Czy na pewno chcesz usunąć słownik <strong>{{ dictionary.name }}</strong>?</p>
+                        <p>Ta operacja jest nieodwracalna i spowoduje usunięcie wszystkich plików słownika z serwera.</p>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Autor:</strong> {{ dictionary.creator_name }}</p>
+                            <p><strong>Język:</strong> {{ dictionary.language_code }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Data utworzenia:</strong> {{ dictionary.created_at|date:"d.m.Y H:i" }}</p>
+                            <p><strong>Ostatnia aktualizacja:</strong> {{ dictionary.updated_at|date:"d.m.Y H:i" }}</p>
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'dictionary:detail' dictionary.id %}" class="btn btn-secondary me-md-2">Anuluj</a>
+                            <button type="submit" class="btn btn-danger">Usuń słownik</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

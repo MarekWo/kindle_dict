@@ -6,7 +6,8 @@ Admin configuration for the Dictionary app.
 
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import Dictionary, DictionarySuggestion
+from django.contrib import messages
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration
 
 @admin.register(Dictionary)
 class DictionaryAdmin(admin.ModelAdmin):
@@ -76,3 +77,31 @@ class DictionarySuggestionAdmin(admin.ModelAdmin):
         self.message_user(request, _("Selected suggestions have been rejected."))
     
     reject_suggestions.short_description = _("Reject selected suggestions")
+
+@admin.register(SMTPConfiguration)
+class SMTPConfigurationAdmin(admin.ModelAdmin):
+    """Admin for SMTPConfiguration model"""
+    list_display = ('host', 'port', 'encryption', 'from_email', 'from_name', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (_('Serwer SMTP'), {
+            'fields': ('host', 'port', 'encryption', 'auto_tls')
+        }),
+        (_('Uwierzytelnianie'), {
+            'fields': ('authentication', 'username', 'password')
+        }),
+        (_('Nadawca'), {
+            'fields': ('from_email', 'from_name')
+        }),
+        (_('Daty'), {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        """Only allow adding if no configuration exists"""
+        return not SMTPConfiguration.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of the configuration"""
+        return False

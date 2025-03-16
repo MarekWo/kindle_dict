@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dictionary_extras %}
 {% comment %} kindle_dict/src/templates/home.html {% endcomment %}
 {% block title %}Biblioteka Słowników Kindle{% endblock %}
 
@@ -17,11 +18,11 @@
                 <div class="card-body">
                     <h5 class="card-title">Stwórz nowy słownik</h5>
                     <p class="card-text">Utwórz własny słownik Kindle przez wprowadzenie tekstu lub przesłanie pliku tekstowego. Wygenerowane pliki będą gotowe do wgrania na twoje urządzenie Kindle.</p>
-                    {% if user.is_authenticated and 'Dictionary Creator' in user.groups.all|stringformat:'s' %}
+                    {% if user.is_authenticated and user.is_superuser or user|has_group:"Dictionary Creator" or user|has_group:"Dictionary Admin" %}
                         <a href="{% url 'dictionary:create' %}" class="btn btn-primary">Utwórz słownik</a>
                     {% elif user.is_authenticated %}
                         <div class="alert alert-info">
-                            Tworzenie słowników jest dostępne tylko dla użytkowników z rolą Dictionary Creator.
+                            Tworzenie słowników jest dostępne tylko dla użytkowników z odpowiednimi uprawnieniami.
                         </div>
                     {% else %}
                         <a href="{% url 'login' %}" class="btn btn-primary">Zaloguj się, aby utworzyć słownik</a>
@@ -57,11 +58,11 @@
                     
                     <h6 class="mt-4">Format tekstu:</h6>
                     <pre class="bg-light p-3 rounded">
-~Słowo_główne    {odmiana1, odmiana2} Definicja słowa głównego.
+~Słowo_główne | {odmiana1, odmiana2} Definicja słowa głównego.
 
-+Podsłowo    {odmiana1, odmiana2} Definicja podsłowa.
++Podsłowo | {odmiana1, odmiana2} Definicja podsłowa.
 
-Proste_słowo    {odmiana1, odmiana2} Definicja prostego słowa.</pre>
+Proste_słowo | {odmiana1, odmiana2} Definicja prostego słowa.</pre>
                 </div>
             </div>
         </div>

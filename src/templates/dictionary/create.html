@@ -16,16 +16,17 @@
                 <div class="card-body">
                     <p>Używaj następującego formatu dla zawartości słownika:</p>
                     <pre class="bg-light p-3 rounded">
-~Słowo_główne    {odmiana1, odmiana2} Definicja słowa głównego.
+~Słowo_główne | {odmiana1, odmiana2} Definicja słowa głównego.
 
-+Podsłowo    {odmiana1, odmiana2} Definicja podsłowa.
++Podsłowo | {odmiana1, odmiana2} Definicja podsłowa.
 
-Proste_słowo    {odmiana1, odmiana2} Definicja prostego słowa.</pre>
+Proste_słowo | {odmiana1, odmiana2} Definicja prostego słowa.</pre>
                     <p><strong>Legenda:</strong></p>
                     <ul>
                         <li><code>~</code> oznacza grupę haseł</li>
                         <li><code>+</code> oznacza hasło należące do poprzedzającej grupy</li>
                         <li>Słowa bez prefiksu są podstawowymi hasłami słownika</li>
+                        <li>Znak <code>|</code> (pipe) oddziela nazwę hasła od odmian i definicji</li>
                         <li>Odmiany słów umieszczaj w nawiasach klamrowych <code>{}</code> oddzielone przecinkami</li>
                     </ul>
                 </div>
@@ -71,6 +72,19 @@ Proste_słowo    {odmiana1, odmiana2} Definicja prostego słowa.</pre>
                                 {% endif %}
                                 {% if form.creator_name.help_text %}
                                     <div class="form-text">{{ form.creator_name.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ form.notification_email.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.notification_email.label }}</label>
+                            <div class="col-sm-9">
+                                {{ form.notification_email }}
+                                {% if form.notification_email.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.notification_email.errors }}</div>
+                                {% endif %}
+                                {% if form.notification_email.help_text %}
+                                    <div class="form-text">{{ form.notification_email.help_text }}</div>
                                 {% endif %}
                             </div>
                         </div>

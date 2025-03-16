@@ -18,7 +18,7 @@ from django.core.files import File
 
 def parse_line(line):
     """Parse a line of dictionary content to extract term, inflections and description."""
-    match = re.match(r'^(.*?)\t(\{.*?\})?\s+(.*)$', line)
+    match = re.match(r'^(.*?)\s*\|\s*(\{.*?\})?\s+(.*)$', line)
     if match:
         term = match.group(1).strip()
         inflections = match.group(2)

@@ -8,8 +8,11 @@ import os
 import logging
 from celery import shared_task
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 @shared_task
 def process_dictionary(dictionary_id):
@@ -39,6 +42,9 @@ def process_dictionary(dictionary_id):
             dictionary.built_at = timezone.now()
             dictionary.save(update_fields=['status', 'built_at', 'updated_at'])
             
+            # Send email notification
+            send_completion_notification.delay(str(dictionary.id))
+            
             logger.info(f"Successfully processed dictionary: {dictionary_id}")
             return True
         else:
@@ -60,4 +66,31 @@ def process_dictionary(dictionary_id):
         except:
             pass
             
+        return False
+
+@shared_task
+def send_completion_notification(dictionary_id):
+    """
+    Send an email notification when a dictionary is completed.
+    """
+    # Import here to avoid circular imports
+    from .models import Dictionary
+    from .email_utils import send_dictionary_completion_email
+    
+    logger.info(f"Sending completion notification for dictionary: {dictionary_id}")
+    
+    try:
+        # Get the dictionary object
+        dictionary = Dictionary.objects.get(pk=dictionary_id)
+        
+        # Use the improved email sending function from email_utils.py
+        success = send_dictionary_completion_email(dictionary)
+        
+        return success
+        
+    except Dictionary.DoesNotExist:
+        logger.error(f"Dictionary not found: {dictionary_id}")
+        return False
+    except Exception as e:
+        logger.error(f"Error sending completion notification for dictionary {dictionary_id}: {str(e)}")
         return False

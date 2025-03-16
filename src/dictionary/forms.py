@@ -6,7 +6,7 @@ Forms for the Dictionary app.
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Dictionary, DictionarySuggestion
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration
 from django.core.validators import FileExtensionValidator
 
 class DictionaryForm(forms.ModelForm):
@@ -31,22 +31,25 @@ class DictionaryForm(forms.ModelForm):
     
     class Meta:
         model = Dictionary
-        fields = ['name', 'description', 'creator_name', 'language_code', 'is_public', 'source_file']
+        fields = ['name', 'description', 'creator_name', 'notification_email', 'language_code', 'is_public', 'source_file']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
             'creator_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'notification_email': forms.EmailInput(attrs={'class': 'form-control'}),
             'language_code': forms.TextInput(attrs={'class': 'form-control'}),
             'is_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
             'name': _('Nazwa'),
             'description': _('Opis'),
-            'creator_name': _('Nazwa twórcy'),
+            'creator_name': _('Autor słownika'),
+            'notification_email': _('Adres e-mail do powiadomień'),
             'language_code': _('Kod języka'),
             'is_public': _('Publiczny'),
         }
         help_texts = {
+            'notification_email': _('Opcjonalny adres e-mail, na który zostanie wysłane powiadomienie o utworzeniu słownika.'),
             'language_code': _('Np. pl dla polskiego, en dla angielskiego.'),
         }
     
@@ -58,6 +61,71 @@ class DictionaryForm(forms.ModelForm):
         # Either content or source_file must be provided
         if not content and not source_file:
             raise forms.ValidationError(_("Musisz albo podać zawartość, albo przesłać plik."))
+        
+        return cleaned_data
+
+class SMTPConfigurationForm(forms.ModelForm):
+    """Form for configuring SMTP settings"""
+    
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False,
+        label=_("Hasło SMTP"),
+        help_text=_("Hasło do konta SMTP.")
+    )
+    
+    test_email = forms.EmailField(
+        required=False,
+        label=_("Adres e-mail do testu"),
+        help_text=_("Adres e-mail, na który zostanie wysłana testowa wiadomość."),
+        widget=forms.EmailInput(attrs={'class': 'form-control'})
+    )
+    
+    class Meta:
+        model = SMTPConfiguration
+        fields = [
+            'host', 'port', 'encryption', 'auto_tls', 'authentication',
+            'username', 'password', 'from_email', 'from_name'
+        ]
+        widgets = {
+            'host': forms.TextInput(attrs={'class': 'form-control'}),
+            'port': forms.NumberInput(attrs={'class': 'form-control'}),
+            'encryption': forms.RadioSelect(),
+            'auto_tls': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'authentication': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'from_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'from_name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        help_texts = {
+            'host': _('Adres serwera SMTP, np. smtp.gmail.com'),
+            'port': _('Port serwera SMTP, np. 587 dla TLS, 465 dla SSL, 25 dla braku szyfrowania'),
+            'encryption': _('Rodzaj szyfrowania używany przez serwer SMTP'),
+            'auto_tls': _('Automatycznie używaj TLS, jeśli serwer go obsługuje'),
+            'authentication': _('Czy serwer SMTP wymaga uwierzytelniania'),
+            'username': _('Nazwa użytkownika do konta SMTP'),
+            'from_email': _('Adres e-mail, z którego będą wysyłane wiadomości'),
+            'from_name': _('Nazwa nadawcy, która będzie wyświetlana w wiadomościach e-mail'),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        authentication = cleaned_data.get('authentication')
+        username = cleaned_data.get('username')
+        password = cleaned_data.get('password')
+        
+        # If authentication is enabled, username and password are required
+        if authentication:
+            if not username:
+                self.add_error('username', _('Nazwa użytkownika jest wymagana przy włączonym uwierzytelnianiu.'))
+            
+            # Sprawdź, czy to jest edycja istniejącej konfiguracji
+            instance = getattr(self, 'instance', None)
+            
+            # Jeśli to edycja istniejącej konfiguracji i hasło jest puste,
+            # nie wymagaj hasła - zostanie zachowane poprzednie
+            if not password and not (instance and instance.pk):
+                self.add_error('password', _('Hasło jest wymagane przy włączonym uwierzytelnianiu.'))
         
         return cleaned_data
 
