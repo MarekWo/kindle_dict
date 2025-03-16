@@ -72,6 +72,6 @@ Desktop.ini
 .DS_Store
 
 # Project specific
-kindlegen.exe
+# kindlegen.exe
 /media/
 /logs/
