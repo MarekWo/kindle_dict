@@ -46,13 +46,13 @@ fi
 
 # Tworzenie katalogów dla projektu
 echo -e "${YELLOW}Tworzenie katalogów dla projektu...${NC}"
-mkdir -p ~/kindle_dict/{logs,nginx/ssl}
+mkdir -p kindle_dict/{logs,nginx/ssl}
 
 # Kopiowanie certyfikatów SSL
 echo -e "${YELLOW}Kopiowanie certyfikatów SSL...${NC}"
-cp /home/marek/ssl/config/live/dict.c11.net.pl/fullchain.pem ~/kindle_dict/nginx/ssl/
-cp /home/marek/ssl/config/live/dict.c11.net.pl/privkey.pem ~/kindle_dict/nginx/ssl/
-chmod 644 ~/kindle_dict/nginx/ssl/*.pem
+cp /home/marek/ssl/config/live/dict.c11.net.pl/fullchain.pem kindle_dict/nginx/ssl/
+cp /home/marek/ssl/config/live/dict.c11.net.pl/privkey.pem kindle_dict/nginx/ssl/
+chmod 644 kindle_dict/nginx/ssl/*.pem
 
 # Generowanie bezpiecznego klucza dla Django
 echo -e "${YELLOW}Generowanie bezpiecznego klucza dla Django...${NC}"
@@ -60,15 +60,15 @@ DJANGO_SECRET_KEY=$(openssl rand -base64 50 | tr -dc 'a-zA-Z0-9!@#$%^&*(-_=+)' |
 
 # Aktualizacja pliku .env.prod
 echo -e "${YELLOW}Aktualizacja pliku .env.prod...${NC}"
-sed -i "s/SECRET_KEY=zmień_to_na_bezpieczny_klucz_produkcyjny/SECRET_KEY=$DJANGO_SECRET_KEY/" ~/kindle_dict/.env.prod
+sed -i "s/SECRET_KEY=zmień_to_na_bezpieczny_klucz_produkcyjny/SECRET_KEY=$DJANGO_SECRET_KEY/" kindle_dict/.env.prod
 echo -e "${GREEN}Plik .env.prod został zaktualizowany z bezpiecznym kluczem.${NC}"
 
 echo -e "${YELLOW}Proszę zaktualizować hasło bazy danych w pliku .env.prod:${NC}"
-echo -e "${YELLOW}nano ~/kindle_dict/.env.prod${NC}"
+echo -e "${YELLOW}nano kindle_dict/.env.prod${NC}"
 
 echo -e "${GREEN}Konfiguracja środowiska produkcyjnego zakończona.${NC}"
 echo -e "${GREEN}Aby uruchomić aplikację, wykonaj:${NC}"
-echo -e "${YELLOW}cd ~/kindle_dict${NC}"
+echo -e "${YELLOW}cd kindle_dict${NC}"
 echo -e "${YELLOW}docker-compose -f docker-compose.prod.yml up -d${NC}"
 
 echo -e "${YELLOW}Aby wykonać migracje bazy danych, wykonaj:${NC}"

@@ -11,7 +11,7 @@ NC='\033[0m' # No Color
 
 # Konfiguracja
 SERVER="marek@dict.c11.net.pl"
-REMOTE_DIR="~/kindle_dict"
+REMOTE_DIR="kindle_dict"
 
 echo -e "${GREEN}Rozpoczynam wdrażanie aplikacji na serwer produkcyjny...${NC}"
 

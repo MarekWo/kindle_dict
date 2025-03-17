@@ -26,7 +26,7 @@ NC='\033[0m' # No Color
 echo -e \"\${GREEN}Rozpoczynam aktualizację aplikacji Kindle Dictionary Creator...\${NC}\"
 
 # Przejście do katalogu projektu
-cd ~/kindle_dict
+cd kindle_dict
 
 # Pobranie najnowszych zmian z GitHuba
 echo -e \"\${YELLOW}Pobieranie najnowszych zmian z GitHuba...\${NC}\"

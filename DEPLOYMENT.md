@@ -81,7 +81,7 @@ Po skopiowaniu plików na serwer, zaloguj się na serwer i dokończ konfiguracj�
 
 ```bash
 ssh marek@dict.c11.net.pl
-cd ~/kindle_dict
+cd kindle_dict
 ./setup_production.sh
 ```
 
@@ -97,7 +97,7 @@ Skrypt ten:
 Po uruchomieniu skryptu konfiguracyjnego, należy edytować plik .env.prod, aby ustawić bezpieczne hasło dla bazy danych i skonfigurować inne zmienne środowiskowe:
 
 ```bash
-nano ~/kindle_dict/.env.prod
+nano kindle_dict/.env.prod
 ```
 
 Zwróć szczególną uwagę na następujące zmienne:
@@ -110,7 +110,7 @@ Zwróć szczególną uwagę na następujące zmienne:
 Po zakończeniu konfiguracji, uruchom aplikację:
 
 ```bash
-cd ~/kindle_dict
+cd kindle_dict
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
@@ -149,21 +149,21 @@ https://dict.c11.net.pl/admin/
 ### Zatrzymanie aplikacji
 
 ```bash
-cd ~/kindle_dict
+cd kindle_dict
 docker-compose -f docker-compose.prod.yml down
 ```
 
 ### Ponowne uruchomienie aplikacji
 
 ```bash
-cd ~/kindle_dict
+cd kindle_dict
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ### Przeglądanie logów
 
 ```bash
-cd ~/kindle_dict
+cd kindle_dict
 docker-compose -f docker-compose.prod.yml logs -f
 ```
 
@@ -178,7 +178,7 @@ Istnieją dwie metody aktualizacji aplikacji:
 ./deploy_to_production.sh
 
 # Na serwerze
-cd ~/kindle_dict
+cd kindle_dict
 docker-compose -f docker-compose.prod.yml down
 docker-compose -f docker-compose.prod.yml up -d --build
 ```
@@ -196,7 +196,7 @@ git push
 
 # Na serwerze
 ssh marek@dict.c11.net.pl
-cd ~/kindle_dict
+cd kindle_dict
 git pull  # Pobierz najnowsze zmiany z GitHuba
 docker-compose -f docker-compose.prod.yml down
 docker-compose -f docker-compose.prod.yml up -d --build
@@ -225,6 +225,23 @@ ssh marek@dict.c11.net.pl "./update_kindle_dict.sh"
 Ten sposób aktualizacji jest najbardziej zalecany, ponieważ automatyzuje wszystkie niezbędne kroki.
 
 ## Rozwiązywanie problemów
+
+### Problem z synchronizacją czasu podczas budowania obrazu Docker
+
+Jeśli podczas budowania obrazu Docker pojawi się błąd związany z repozytorium Debian Security, taki jak:
+
+```
+E: Release file for http://deb.debian.org/debian-security/dists/bookworm-security/InRelease is not valid yet (invalid for another X min X sec). Updates for this repository will not be applied.
+```
+
+Jest to spowodowane problemem z synchronizacją czasu na serwerze. W pliku `Dockerfile.prod` dodaliśmy opcję `--allow-releaseinfo-change` do poleceń `apt-get update` oraz dodaliśmy `|| true`, aby ignorować błędy związane z repozytorium debian-security.
+
+Jeśli problem nadal występuje, możesz spróbować zsynchronizować czas na serwerze:
+
+```bash
+sudo apt-get install -y ntpdate
+sudo ntpdate pool.ntp.org
+```
 
 ### Sprawdzanie statusu kontenerów
 
@@ -257,8 +274,8 @@ docker-compose -f docker-compose.prod.yml restart [nazwa_kontenera]
 Certyfikaty SSL są już skonfigurowane do automatycznego odnawiania na serwerze. Jeśli jednak wystąpią problemy, można ręcznie skopiować odnowione certyfikaty do katalogu nginx/ssl:
 
 ```bash
-cp /home/marek/ssl/config/live/dict.c11.net.pl/fullchain.pem ~/kindle_dict/nginx/ssl/
-cp /home/marek/ssl/config/live/dict.c11.net.pl/privkey.pem ~/kindle_dict/nginx/ssl/
-chmod 644 ~/kindle_dict/nginx/ssl/*.pem
+cp /home/marek/ssl/config/live/dict.c11.net.pl/fullchain.pem kindle_dict/nginx/ssl/
+cp /home/marek/ssl/config/live/dict.c11.net.pl/privkey.pem kindle_dict/nginx/ssl/
+chmod 644 kindle_dict/nginx/ssl/*.pem
 docker-compose -f docker-compose.prod.yml restart nginx
 ```

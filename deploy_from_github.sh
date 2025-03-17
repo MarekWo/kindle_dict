@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 # Konfiguracja
 SERVER="marek@dict.c11.net.pl"
-REMOTE_DIR="~/kindle_dict"
+REMOTE_DIR="kindle_dict"
 GITHUB_REPO="https://github.com/MarekWo/kindle_dict.git"
 
 echo -e "${GREEN}Rozpoczynam wdrażanie aplikacji na serwer produkcyjny z GitHub...${NC}"
@@ -31,7 +31,7 @@ NC='\033[0m' # No Color
 
 # Konfiguracja
 GITHUB_REPO=\"https://github.com/MarekWo/kindle_dict.git\"
-APP_DIR=\"~/kindle_dict\"
+APP_DIR=\"kindle_dict\"
 
 echo -e \"\${GREEN}Rozpoczynam wdrażanie aplikacji Kindle Dictionary Creator...\${NC}\"
 

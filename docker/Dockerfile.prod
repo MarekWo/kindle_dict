@@ -7,7 +7,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Instalacja zależności systemowych potrzebnych do kompilacji
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Dodajemy opcję --allow-releaseinfo-change, aby ignorować błędy związane z plikami Release
+RUN apt-get update --allow-releaseinfo-change || true && \
+    apt-get install -y --no-install-recommends \
     default-libmysqlclient-dev \
     build-essential \
     libpq-dev \
@@ -38,7 +40,9 @@ ENV DISPLAY=
 RUN dpkg --add-architecture i386
 
 # Instalacja wine do uruchamiania kindlegen.exe wraz z niezbędnymi zależnościami
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Dodajemy opcję --allow-releaseinfo-change, aby ignorować błędy związane z plikami Release
+RUN apt-get update --allow-releaseinfo-change || true && \
+    apt-get install -y --no-install-recommends \
     wine \
     wine32 \
     xvfb \
