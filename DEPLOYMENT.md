@@ -256,6 +256,22 @@ Jest to spowodowane tym, że w wieloetapowym procesie budowania obrazu Docker, u
 
 Jeśli problem nadal występuje, możesz dodać brakujące zależności bezpośrednio do pliku `requirements.txt`.
 
+### Problem z SECRET_KEY podczas budowania obrazu Docker
+
+Jeśli podczas budowania obrazu Docker pojawi się błąd związany z brakującym kluczem SECRET_KEY, taki jak:
+
+```
+django.core.exceptions.ImproperlyConfigured: Set the SECRET_KEY environment variable
+```
+
+Jest to spowodowane tym, że podczas budowania obrazu Docker, próbujemy uruchomić polecenie `collectstatic`, które wymaga zmiennej środowiskowej SECRET_KEY. W pliku `Dockerfile.prod` usunęliśmy polecenie `collectstatic` z etapu budowania obrazu i przenieśliśmy je do etapu uruchamiania kontenera.
+
+Po uruchomieniu kontenera, należy ręcznie uruchomić polecenie `collectstatic`:
+
+```bash
+docker-compose -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput --settings=kindle_dict.settings.prod
+```
+
 ### Sprawdzanie statusu kontenerów
 
 ```bash

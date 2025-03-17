@@ -78,8 +78,8 @@ COPY ./src /app/
 # Tworzenie katalogów dla statycznych i mediów
 RUN mkdir -p /app/staticfiles /app/media /app/logs
 
-# Zbieranie plików statycznych
-RUN python manage.py collectstatic --noinput --settings=kindle_dict.settings.prod
+# Nie uruchamiamy collectstatic podczas budowania obrazu, ponieważ wymaga to zmiennych środowiskowych
+# Zamiast tego, będziemy uruchamiać collectstatic podczas uruchamiania kontenera
 
 # Tworzenie użytkownika nieroot
 RUN useradd --create-home appuser

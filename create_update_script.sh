@@ -46,7 +46,7 @@ docker-compose -f docker-compose.prod.yml exec -T web python manage.py migrate
 
 # Zbieranie plików statycznych
 echo -e \"\${YELLOW}Zbieranie plików statycznych...\${NC}\"
-docker-compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
+docker-compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput --settings=kindle_dict.settings.prod
 
 echo -e \"\${GREEN}Aktualizacja aplikacji zakończona pomyślnie.\${NC}\"
 echo -e \"\${GREEN}Aplikacja jest dostępna pod adresem: https://dict.c11.net.pl\${NC}\"
