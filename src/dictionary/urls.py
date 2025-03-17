@@ -14,6 +14,7 @@ urlpatterns = [
     path('', views.DictionaryListView.as_view(), name='list'),
     path('create/', views.DictionaryCreateView.as_view(), name='create'),
     path('<uuid:pk>/', views.DictionaryDetailView.as_view(), name='detail'),
+    path('<uuid:pk>/update/', views.DictionaryUpdateView.as_view(), name='update'),
     path('<uuid:pk>/download/<str:file_type>/', views.dictionary_download, name='download'),
     path('<uuid:pk>/delete/', views.dictionary_delete, name='delete'),
     

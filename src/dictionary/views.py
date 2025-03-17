@@ -8,6 +8,7 @@ import os
 import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.views.generic.edit import UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
@@ -282,6 +283,79 @@ def dictionary_delete(request, pk):
     
     # If not POST, show confirmation page
     return render(request, 'dictionary/delete_confirm.html', {'dictionary': dictionary})
+
+class DictionaryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """View to update an existing dictionary"""
+    model = Dictionary
+    form_class = DictionaryForm
+    template_name = 'dictionary/update.html'
+    login_url = reverse_lazy('login')
+    
+    def get_success_url(self):
+        """Return to the dictionary detail page after update"""
+        return reverse_lazy('dictionary:detail', kwargs={'pk': self.object.pk})
+    
+    def test_func(self):
+        """Check if user has permission to edit dictionaries"""
+        return (self.request.user.is_superuser or 
+                self.request.user.groups.filter(name='Dictionary Admin').exists() or
+                self.request.user.groups.filter(name='Dictionary Edit').exists())
+    
+    def get_initial(self):
+        """Set initial values for the form"""
+        initial = super().get_initial()
+        
+        # If the dictionary has a source file, try to read its content
+        dictionary = self.get_object()
+        if dictionary.source_file:
+            try:
+                with open(dictionary.source_file.path, 'r', encoding='utf-8') as f:
+                    initial['content'] = f.read()
+            except:
+                pass
+                
+        return initial
+    
+    def form_valid(self, form):
+        """Process the form if it's valid"""
+        # Save the dictionary instance first
+        self.object = form.save(commit=False)
+        
+        # Increment build version
+        self.object.build_version += 1
+        
+        # Handle content from textarea if provided
+        content = form.cleaned_data.get('content')
+        if content:
+            # Create a temporary file and save the content to it
+            import tempfile
+            
+            # Create a temporary file with the content
+            content_file = tempfile.NamedTemporaryFile(delete=False, suffix='.txt')
+            content_file.write(content.encode('utf-8'))
+            content_file.close()
+            
+            # Set the source_file field to this file
+            from django.core.files import File
+            with open(content_file.name, 'rb') as f:
+                filename = f"{self.object.name}.txt"
+                self.object.source_file.save(filename, File(f), save=False)
+            
+            # Clean up the temporary file
+            os.unlink(content_file.name)
+        
+        # Set status and save the object
+        self.object.status = 'pending'
+        self.object.save()
+        
+        # Start the Celery task for processing the dictionary
+        process_dictionary.delay(str(self.object.id))
+        
+        # Show success message
+        messages.success(self.request, _("Słownik został zaktualizowany i jest przetwarzany."))
+        
+        return redirect(self.get_success_url())
+
 
 @user_passes_test(lambda u: u.is_superuser)
 def test_smtp_email(request):

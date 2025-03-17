@@ -33,7 +33,7 @@ def parse_line(line):
     else:
         return None
 
-def process_dictionary_content(content, base_filename, work_dir, language_info):
+def process_dictionary_content(content, base_filename, work_dir, language_info, build_version=1):
     """
     Process dictionary content and generate all necessary files.
     
@@ -114,7 +114,7 @@ def process_dictionary_content(content, base_filename, work_dir, language_info):
     # Generate JSON metadata file
     json_path = os.path.join(work_dir, f"{base_filename}.json")
     metadata = {
-        'build_version': 1,
+        'build_version': build_version,
         'build_date': datetime.now().isoformat(),
         'created_by': language_info['creator_name'],
         'updated_by': language_info['creator_name'],
@@ -280,6 +280,7 @@ def run_kindlegen(opf_file, output_file=None):
     mobi_path = os.path.join(directory, output_file if output_file else f"{base_filename}.mobi")
     
     logger.info(f"Attempting to generate MOBI file for {opf_file}")
+    logger.info(f"Expected MOBI output path: {mobi_path}")
     
     try:
         # Używamy tylko alternatywnego podejścia - kopiujemy pliki do katalogu media
@@ -403,7 +404,8 @@ def create_dictionary_files(dictionary_instance):
                 content, 
                 dictionary_instance.name, 
                 temp_dir, 
-                language_info
+                language_info,
+                dictionary_instance.build_version
             )
             
             # Generate MOBI file
@@ -419,9 +421,22 @@ def create_dictionary_files(dictionary_instance):
                         zipf.write(file_path, os.path.basename(file_path))
             file_paths['zip'] = zip_path
             
+            # Upewnijmy się, że plik MOBI został dodany do pliku ZIP
+            if 'mobi' in file_paths and os.path.exists(file_paths['mobi']):
+                with zipfile.ZipFile(zip_path, 'a') as zipf:
+                    mobi_filename = os.path.basename(file_paths['mobi'])
+                    if mobi_filename not in zipf.namelist():
+                        zipf.write(file_paths['mobi'], mobi_filename)
+                        logger.info(f"Added MOBI file to ZIP: {mobi_filename}")
+            
             # Save files to model
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Saving files to dictionary model. Available files: {list(file_paths.keys())}")
+            
             for file_key, file_path in file_paths.items():
                 if os.path.exists(file_path):
+                    logger.info(f"Saving {file_key} file: {file_path}")
                     with open(file_path, 'rb') as f:
                         if file_key == 'html':
                             dictionary_instance.html_file.save(os.path.basename(file_path), File(f), save=False)
@@ -434,15 +449,13 @@ def create_dictionary_files(dictionary_instance):
                         elif file_key == 'zip':
                             dictionary_instance.zip_file.save(os.path.basename(file_path), File(f), save=False)
                         elif file_key == 'mobi':
+                            logger.info(f"Saving MOBI file: {file_path} (size: {os.path.getsize(file_path)} bytes)")
                             dictionary_instance.mobi_file.save(os.path.basename(file_path), File(f), save=False)
+                else:
+                    logger.warning(f"File {file_path} does not exist, skipping")
             
-            # Update metadata from JSON
-            try:
-                with open(file_paths['json'], 'r', encoding='utf-8') as f:
-                    metadata = json.load(f)
-                    dictionary_instance.build_version = metadata.get('build_version', 1)
-            except:
-                pass
+            # Nie aktualizujemy numeru wersji z pliku JSON, ponieważ chcemy zachować wartość ustawioną w widoku
+            # Numer wersji jest już zapisany w pliku JSON i zostanie zachowany w modelu
             
             # Save the instance
             dictionary_instance.save()

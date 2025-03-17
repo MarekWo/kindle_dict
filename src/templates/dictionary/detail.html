@@ -115,6 +115,9 @@
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                         <a href="{% url 'dictionary:list' %}" class="btn btn-secondary">Powrót do listy</a>
+                        {% if user.is_superuser or user|has_group:"Dictionary Admin" or user|has_group:"Dictionary Edit" %}
+                            <a href="{% url 'dictionary:update' dictionary.id %}" class="btn btn-primary ms-2">Modyfikuj</a>
+                        {% endif %}
                         {% if user.is_superuser or user|has_group:"Dictionary Admin" %}
                             <a href="{% url 'dictionary:delete' dictionary.id %}" class="btn btn-danger ms-2">Usuń słownik</a>
                         {% endif %}
