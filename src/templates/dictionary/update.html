@@ -76,6 +76,19 @@ Proste_słowo | {odmiana1, odmiana2} Definicja prostego słowa.</pre>
                         </div>
                         
                         <div class="mb-3 row">
+                            <label for="{{ form.updater_name.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.updater_name.label }}</label>
+                            <div class="col-sm-9">
+                                {{ form.updater_name }}
+                                {% if form.updater_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.updater_name.errors }}</div>
+                                {% endif %}
+                                {% if form.updater_name.help_text %}
+                                    <div class="form-text">{{ form.updater_name.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
                             <label for="{{ form.notification_email.id_for_label }}" class="col-sm-3 col-form-label text-sm-end">{{ form.notification_email.label }}</label>
                             <div class="col-sm-9">
                                 {{ form.notification_email }}

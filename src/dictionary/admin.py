@@ -12,13 +12,13 @@ from .models import Dictionary, DictionarySuggestion, SMTPConfiguration
 @admin.register(Dictionary)
 class DictionaryAdmin(admin.ModelAdmin):
     """Admin for Dictionary model"""
-    list_display = ('name', 'creator_name', 'language_code', 'status', 'is_public', 'build_version', 'created_at', 'built_at')
+    list_display = ('name', 'creator_name', 'updater_name', 'language_code', 'status', 'is_public', 'build_version', 'created_at', 'built_at')
     list_filter = ('status', 'is_public', 'language_code')
-    search_fields = ('name', 'description', 'creator_name')
+    search_fields = ('name', 'description', 'creator_name', 'updater_name')
     readonly_fields = ('id', 'created_at', 'updated_at', 'built_at')
     fieldsets = (
         (None, {
-            'fields': ('id', 'name', 'description', 'creator_name', 'language_code', 'is_public')
+            'fields': ('id', 'name', 'description', 'creator_name', 'updater_name', 'language_code', 'is_public')
         }),
         (_('Files'), {
             'fields': ('source_file', 'html_file', 'opf_file', 'jpg_file', 'mobi_file', 'json_file', 'zip_file')

@@ -113,11 +113,21 @@ def process_dictionary_content(content, base_filename, work_dir, language_info, 
     
     # Generate JSON metadata file
     json_path = os.path.join(work_dir, f"{base_filename}.json")
+    current_time = datetime.now().isoformat()
+    
+    # Use the creation date from language_info if provided
+    original_build_date = language_info.get('original_build_date')
+    
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Original build date from model: {original_build_date}")
+    
     metadata = {
         'build_version': build_version,
-        'build_date': datetime.now().isoformat(),
+        'build_date': original_build_date if original_build_date else current_time,
+        'updated_at': current_time,
         'created_by': language_info['creator_name'],
-        'updated_by': language_info['creator_name'],
+        'updated_by': language_info.get('updater_name', language_info['creator_name']),
         'dictionary_name': base_filename,
         'language_code': language_info['language_code']
     }
@@ -382,6 +392,8 @@ def create_dictionary_files(dictionary_instance):
     Returns:
         True if successful, False otherwise
     """
+    import logging
+    logger = logging.getLogger(__name__)
     try:
         # Get source file content
         with open(dictionary_instance.source_file.path, 'r', encoding='utf-8') as f:
@@ -394,10 +406,16 @@ def create_dictionary_files(dictionary_instance):
                 'css_path': 'styles.css',
                 'language_code': dictionary_instance.language_code,
                 'creator_name': dictionary_instance.creator_name,
+                'updater_name': dictionary_instance.updater_name,
                 'output_encoding': 'utf-8',
                 'dictionary_in_language': 'pl',  # Default, could be customized later
                 'dictionary_out_language': 'pl',  # Default, could be customized later
             }
+            
+            # Add original build date if this is an update
+            if dictionary_instance.created_at:
+                language_info['original_build_date'] = dictionary_instance.created_at.isoformat()
+                logger.info(f"Using original build date from model: {language_info['original_build_date']}")
             
             # Process dictionary content
             file_paths = process_dictionary_content(

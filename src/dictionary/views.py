@@ -19,7 +19,7 @@ from django.utils import timezone
 from django.conf import settings
 
 from .models import Dictionary, DictionarySuggestion, SMTPConfiguration
-from .forms import DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm
+from .forms import DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm
 from .tasks import process_dictionary
 from .email_utils import send_test_email
 
@@ -287,7 +287,7 @@ def dictionary_delete(request, pk):
 class DictionaryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """View to update an existing dictionary"""
     model = Dictionary
-    form_class = DictionaryForm
+    form_class = DictionaryUpdateForm
     template_name = 'dictionary/update.html'
     login_url = reverse_lazy('login')
     
@@ -313,6 +313,13 @@ class DictionaryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
                     initial['content'] = f.read()
             except:
                 pass
+        
+        # Set updater_name to the user's full name
+        if self.request.user.is_authenticated:
+            user = self.request.user
+            full_name = f"{user.first_name} {user.last_name}".strip()
+            if full_name:  # Only set if the user has a name
+                initial['updater_name'] = full_name
                 
         return initial
     
@@ -323,6 +330,13 @@ class DictionaryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         
         # Increment build version
         self.object.build_version += 1
+        
+        # Set updater_name if not provided
+        if not self.object.updater_name and self.request.user.is_authenticated:
+            user = self.request.user
+            full_name = f"{user.first_name} {user.last_name}".strip()
+            if full_name:
+                self.object.updater_name = full_name
         
         # Handle content from textarea if provided
         content = form.cleaned_data.get('content')

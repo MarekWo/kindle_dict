@@ -45,6 +45,11 @@ class Dictionary(models.Model):
         max_length=255,
         verbose_name=_("Creator Name")
     )
+    updater_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Updater Name")
+    )
     notification_email = models.EmailField(
         blank=True,
         null=True,

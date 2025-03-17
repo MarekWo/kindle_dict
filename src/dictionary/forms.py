@@ -129,6 +129,66 @@ class SMTPConfigurationForm(forms.ModelForm):
         
         return cleaned_data
 
+class DictionaryUpdateForm(forms.ModelForm):
+    """Form for updating an existing dictionary"""
+    
+    # You can also provide content via textarea instead of a file
+    content = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 15, 'class': 'form-control'}),
+        required=False,
+        label=_("Zawartość słownika"),
+        help_text=_("Wklej tutaj wpisy słownika lub prześlij plik poniżej.")
+    )
+    
+    # Add validators to ensure only .txt files are uploaded
+    source_file = forms.FileField(
+        required=False,
+        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
+        label=_("Plik źródłowy"),
+        help_text=_("Prześlij plik .txt z wpisami słownika."),
+        widget=forms.FileInput(attrs={'class': 'form-control'})
+    )
+    
+    class Meta:
+        model = Dictionary
+        fields = ['name', 'description', 'creator_name', 'updater_name', 'notification_email', 'language_code', 'is_public', 'source_file']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+            'creator_name': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'updater_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'notification_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'language_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'name': _('Nazwa'),
+            'description': _('Opis'),
+            'creator_name': _('Autor słownika'),
+            'updater_name': _('Autor modyfikacji'),
+            'notification_email': _('Adres e-mail do powiadomień'),
+            'language_code': _('Kod języka'),
+            'is_public': _('Publiczny'),
+        }
+        help_texts = {
+            'creator_name': _('Autor oryginalnego słownika (tylko do odczytu).'),
+            'updater_name': _('Osoba, która dokonała ostatniej modyfikacji słownika.'),
+            'notification_email': _('Opcjonalny adres e-mail, na który zostanie wysłane powiadomienie o aktualizacji słownika.'),
+            'language_code': _('Np. pl dla polskiego, en dla angielskiego.'),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        content = cleaned_data.get("content")
+        source_file = cleaned_data.get("source_file")
+        
+        # Either content or source_file must be provided
+        if not content and not source_file:
+            raise forms.ValidationError(_("Musisz albo podać zawartość, albo przesłać plik."))
+        
+        return cleaned_data
+
+
 class DictionarySuggestionForm(forms.ModelForm):
     """Form for submitting a dictionary suggestion"""
     
