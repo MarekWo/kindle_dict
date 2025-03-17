@@ -288,6 +288,27 @@ Po uruchomieniu kontenera, należy ręcznie uruchomić polecenie `collectstatic`
 docker-compose -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput --settings=kindle_dict.settings.prod
 ```
 
+### Problem z interpolacją zmiennych środowiskowych w Docker Compose
+
+Jeśli podczas uruchamiania kontenerów pojawią się ostrzeżenia o brakujących zmiennych środowiskowych, takie jak:
+
+```
+WARN[0000] The "DB_USER" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "DB_PASSWORD" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "DB_NAME" variable is not set. Defaulting to a blank string. 
+```
+
+Jest to spowodowane tym, że Docker Compose nie wczytuje zmiennych środowiskowych z pliku `.env.prod` do interpolacji w pliku `docker-compose.prod.yml`. W pliku `docker-compose.prod.yml` bezpośrednio ustawiliśmy wartości zmiennych środowiskowych dla kontenera bazy danych:
+
+```yaml
+environment:
+  - POSTGRES_USER=kindle_dict_user
+  - POSTGRES_PASSWORD=wIPO$#IO#^
+  - POSTGRES_DB=kindle_dict
+```
+
+Jeśli chcesz zmienić te wartości, musisz edytować plik `docker-compose.prod.yml`.
+
 ### Sprawdzanie statusu kontenerów
 
 ```bash
