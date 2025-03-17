@@ -1,1 +1,86 @@
+# kindle_dict\docker\Dockerfile.prod
+
+FROM python:3.11-slim AS builder
+
+# Ustawienie zmiennych środowiskowych
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Instalacja zależności systemowych potrzebnych do kompilacji
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-libmysqlclient-dev \
+    build-essential \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ustawienie katalogu roboczego
+WORKDIR /app
+
+# Kopiowanie i instalacja zależności
+COPY requirements.txt /app/
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
+
+# Drugi etap - budowa finalnego obrazu
 FROM python:3.11-slim
+
+# Ustawienie zmiennych środowiskowych
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+# Ustawienie WINEARCH na win32 dla prawidłowej konfiguracji Wine
+ENV WINEARCH=win32
+ENV WINEPREFIX=/root/.wine32
+# Wyłączenie debugowania Wine i interfejsu graficznego
+ENV WINEDEBUG=-all
+ENV DISPLAY=
+
+# Dodanie architektury i386 dla obsługi aplikacji 32-bitowych
+RUN dpkg --add-architecture i386
+
+# Instalacja wine do uruchamiania kindlegen.exe wraz z niezbędnymi zależnościami
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wine \
+    wine32 \
+    xvfb \
+    default-libmysqlclient-dev \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Inicjalizacja Wine w trybie headless (aby uniknąć problemów przy pierwszym uruchomieniu)
+RUN xvfb-run wine wineboot --init || true
+
+# Tworzenie skryptu pomocniczego do uruchamiania kindlegen
+RUN echo '#!/bin/bash\n\
+cd "$(dirname "$1")"\n\
+filename="$(basename "$1")"\n\
+DISPLAY="" WINEDEBUG="-all" WINEDLLOVERRIDES="mscoree,mshtml=" wine /app/tools/kindlegen.exe "$filename" $2 $3 $4 $5\n\
+exit $?\n\
+' > /usr/local/bin/kindlegen && chmod +x /usr/local/bin/kindlegen
+
+# Ustawienie katalogu roboczego
+WORKDIR /app
+
+# Kopiowanie skompilowanych pakietów z etapu budowy
+COPY --from=builder /app/wheels /wheels
+COPY --from=builder /app/requirements.txt .
+RUN pip install --no-cache-dir --no-index --find-links=/wheels/ -r requirements.txt && \
+    rm -rf /wheels
+
+# Kopiowanie projektu
+COPY ./src /app/
+
+# Tworzenie katalogów dla statycznych i mediów
+RUN mkdir -p /app/staticfiles /app/media /app/logs
+
+# Zbieranie plików statycznych
+RUN python manage.py collectstatic --noinput --settings=kindle_dict.settings.prod
+
+# Tworzenie użytkownika nieroot
+RUN useradd --create-home appuser
+RUN chown -R appuser:appuser /app
+RUN chmod +rx /usr/local/bin/kindlegen
+USER appuser
+
+# Uruchomienie serwera produkcyjnego
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "kindle_dict.wsgi:application"]
