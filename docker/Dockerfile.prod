@@ -21,7 +21,8 @@ WORKDIR /app
 
 # Kopiowanie i instalacja zależności
 COPY requirements.txt /app/
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
+# Używamy pip wheel z opcją --wheel-dir, ale bez --no-deps, aby uwzględnić zależności pośrednie
+RUN pip wheel --no-cache-dir --wheel-dir /app/wheels -r requirements.txt
 
 # Drugi etap - budowa finalnego obrazu
 FROM python:3.11-slim

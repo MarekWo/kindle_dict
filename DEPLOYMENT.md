@@ -243,6 +243,19 @@ sudo apt-get install -y ntpdate
 sudo ntpdate pool.ntp.org
 ```
 
+### Problem z zależnościami pośrednimi podczas budowania obrazu Docker
+
+Jeśli podczas budowania obrazu Docker pojawi się błąd związany z brakującymi zależnościami pośrednimi, taki jak:
+
+```
+ERROR: Could not find a version that satisfies the requirement asgiref<4,>=3.6.0 (from django)
+ERROR: No matching distribution found for asgiref<4,>=3.6.0
+```
+
+Jest to spowodowane tym, że w wieloetapowym procesie budowania obrazu Docker, używamy `pip wheel` do tworzenia kół (wheels) dla zależności. W pliku `Dockerfile.prod` usunęliśmy opcję `--no-deps` z polecenia `pip wheel`, aby uwzględnić zależności pośrednie.
+
+Jeśli problem nadal występuje, możesz dodać brakujące zależności bezpośrednio do pliku `requirements.txt`.
+
 ### Sprawdzanie statusu kontenerów
 
 ```bash
