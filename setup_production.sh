@@ -63,10 +63,12 @@ echo -e "${YELLOW}Aktualizacja pliku .env.prod...${NC}"
 sed -i "s/SECRET_KEY=zmień_to_na_bezpieczny_klucz_produkcyjny/SECRET_KEY=$DJANGO_SECRET_KEY/" kindle_dict/.env.prod
 echo -e "${GREEN}Plik .env.prod został zaktualizowany z bezpiecznym kluczem.${NC}"
 
-echo -e "${YELLOW}Proszę zaktualizować hasło bazy danych w pliku .env.prod:${NC}"
+echo -e "${RED}WAŻNE: Musisz zaktualizować hasło bazy danych w pliku .env.prod przed uruchomieniem kontenerów!${NC}"
+echo -e "${RED}Jeśli tego nie zrobisz, baza danych nie uruchomi się poprawnie.${NC}"
 echo -e "${YELLOW}nano kindle_dict/.env.prod${NC}"
 
 echo -e "${GREEN}Konfiguracja środowiska produkcyjnego zakończona.${NC}"
+echo -e "${RED}WAŻNE: Przed uruchomieniem aplikacji, upewnij się, że zaktualizowałeś plik .env.prod!${NC}"
 echo -e "${GREEN}Aby uruchomić aplikację, wykonaj:${NC}"
 echo -e "${YELLOW}cd kindle_dict${NC}"
 echo -e "${YELLOW}docker-compose -f docker-compose.prod.yml up -d${NC}"

@@ -111,13 +111,15 @@ if [ ! -f \"\${APP_DIR}/.env.prod\" ]; then
     sed -i \"s/SECRET_KEY=your_secret_key_here/SECRET_KEY=\${DJANGO_SECRET_KEY}/\" \"\${APP_DIR}/.env.prod\"
     sed -i \"s/ALLOWED_HOSTS=localhost,127.0.0.1/ALLOWED_HOSTS=dict.c11.net.pl,localhost,127.0.0.1/\" \"\${APP_DIR}/.env.prod\"
     echo -e \"\${GREEN}Plik .env.prod został utworzony.\${NC}\"
-    echo -e \"\${YELLOW}Proszę zaktualizować hasło bazy danych w pliku .env.prod:\${NC}\"
+    echo -e \"\${RED}WAŻNE: Musisz zaktualizować hasło bazy danych w pliku .env.prod przed uruchomieniem kontenerów!\${NC}\"
+    echo -e \"\${RED}Jeśli tego nie zrobisz, baza danych nie uruchomi się poprawnie.\${NC}\"
     echo -e \"\${YELLOW}nano \${APP_DIR}/.env.prod\${NC}\"
 else
     echo -e \"\${GREEN}Plik .env.prod już istnieje.\${NC}\"
 fi
 
 echo -e \"\${GREEN}Konfiguracja środowiska produkcyjnego zakończona.\${NC}\"
+echo -e \"\${RED}WAŻNE: Przed uruchomieniem aplikacji, upewnij się, że zaktualizowałeś plik .env.prod!\${NC}\"
 echo -e \"\${GREEN}Aby uruchomić aplikację, wykonaj:\${NC}\"
 echo -e \"\${YELLOW}cd \${APP_DIR}\${NC}\"
 echo -e \"\${YELLOW}docker-compose -f docker-compose.prod.yml up -d\${NC}\"

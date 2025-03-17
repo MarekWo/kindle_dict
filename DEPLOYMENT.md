@@ -92,9 +92,9 @@ Skrypt ten:
 - Wygeneruje bezpieczny klucz dla Django
 - Zaktualizuje plik .env.prod
 
-### 3. Edycja pliku .env.prod
+### 3. Edycja pliku .env.prod (WAŻNE!)
 
-Po uruchomieniu skryptu konfiguracyjnego, należy edytować plik .env.prod, aby ustawić bezpieczne hasło dla bazy danych i skonfigurować inne zmienne środowiskowe:
+Po uruchomieniu skryptu konfiguracyjnego, **koniecznie** należy edytować plik .env.prod, aby ustawić bezpieczne hasło dla bazy danych i skonfigurować inne zmienne środowiskowe:
 
 ```bash
 nano kindle_dict/.env.prod
@@ -105,9 +105,25 @@ Zwróć szczególną uwagę na następujące zmienne:
 - `DB_PASSWORD` (ustaw bezpieczne hasło)
 - Konfiguracja email (jeśli potrzebna)
 
+**UWAGA**: Jeśli nie zaktualizujesz tych wartości przed uruchomieniem kontenerów, baza danych PostgreSQL nie uruchomi się poprawnie i pojawi się błąd:
+
+```
+Error: Database is uninitialized and superuser password is not specified.
+       You must specify POSTGRES_PASSWORD to a non-empty value for the
+       superuser.
+```
+
+Ponadto, podczas wykonywania poleceń Docker Compose, mogą pojawić się ostrzeżenia o brakujących zmiennych środowiskowych:
+
+```
+WARN[0000] The "DB_USER" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "DB_PASSWORD" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "DB_NAME" variable is not set. Defaulting to a blank string. 
+```
+
 ### 4. Uruchomienie aplikacji
 
-Po zakończeniu konfiguracji, uruchom aplikację:
+Po zakończeniu konfiguracji i **po edycji pliku .env.prod**, uruchom aplikację:
 
 ```bash
 cd kindle_dict
