@@ -235,6 +235,55 @@ Ten sposób aktualizacji jest najbardziej zalecany, ponieważ automatyzuje wszys
 
 ## Rozwiązywanie problemów
 
+### Problem z CSRF za proxy
+
+Jeśli po wdrożeniu aplikacji pojawia się błąd "Dostęp zabroniony (403) - Weryfikacja CSRF nie powiodła się. Żądanie zostało przerwane" podczas próby logowania lub wysyłania formularzy, może to być spowodowane niepoprawną konfiguracją nagłówków proxy.
+
+Aby rozwiązać ten problem:
+
+1. Upewnij się, że w pliku `nginx/conf.d/app.conf` są ustawione odpowiednie nagłówki proxy:
+
+```nginx
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-Server $host;
+```
+
+2. Upewnij się, że w pliku `src/kindle_dict/settings/prod.py` jest ustawiona lista zaufanych źródeł dla CSRF:
+
+```python
+CSRF_TRUSTED_ORIGINS = ["https://dict.c11.net.pl"]
+```
+
+### Problem z podwójnymi przekierowaniami SSL
+
+Jeśli po wdrożeniu aplikacji pojawia się błąd "Pętla przekierowań - Firefox has detected that the server is redirecting the request for this address in a way that will never complete", może to być spowodowane podwójnymi przekierowaniami SSL.
+
+Aby rozwiązać ten problem:
+
+1. Upewnij się, że w pliku `src/kindle_dict/settings/prod.py` jest ustawione:
+
+```python
+SECURE_SSL_REDIRECT = False  # Nginx już obsługuje przekierowania
+```
+
+2. Upewnij się, że w pliku `nginx/conf.d/app.conf` jest poprawnie skonfigurowane przekierowanie HTTP na HTTPS:
+
+```nginx
+server {
+    listen 80;
+    server_name dict.c11.net.pl;
+    
+    # Przekierowanie HTTP na HTTPS
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+```
+
 ### Problem z synchronizacją czasu podczas budowania obrazu Docker
 
 Jeśli podczas budowania obrazu Docker pojawi się błąd związany z repozytorium Debian Security, taki jak:
