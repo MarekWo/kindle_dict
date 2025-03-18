@@ -33,6 +33,7 @@ static/admin
 static/rest_framework
 
 # Environments
+.env.prod
 .env
 .venv
 env/
