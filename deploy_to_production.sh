@@ -25,7 +25,7 @@ scp docker/Dockerfile.prod $SERVER:$REMOTE_DIR/docker/
 scp docker-compose.prod.yml $SERVER:$REMOTE_DIR/
 scp nginx/nginx.conf $SERVER:$REMOTE_DIR/nginx/
 scp nginx/conf.d/app.conf $SERVER:$REMOTE_DIR/nginx/conf.d/
-scp .env.prod $SERVER:$REMOTE_DIR/
+scp .env.example $SERVER:$REMOTE_DIR/
 scp requirements.txt $SERVER:$REMOTE_DIR/
 scp setup_production.sh $SERVER:$REMOTE_DIR/
 

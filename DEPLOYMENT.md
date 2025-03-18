@@ -16,7 +16,7 @@ W repozytorium znajdują się następujące pliki konfiguracyjne do wdrożenia p
 - `docker-compose.prod.yml` - Plik Docker Compose do uruchomienia kontenerów w środowisku produkcyjnym
 - `nginx/nginx.conf` - Główny plik konfiguracyjny Nginx
 - `nginx/conf.d/app.conf` - Konfiguracja wirtualnego hosta Nginx dla aplikacji
-- `.env.prod` - Plik z zmiennymi środowiskowymi dla środowiska produkcyjnego (wymaga edycji)
+- `.env.example` - Przykładowy plik z zmiennymi środowiskowymi (kopiowany do `.env` podczas wdrażania)
 - `setup_production.sh` - Skrypt do konfiguracji środowiska produkcyjnego na serwerze
 - `deploy_to_production.sh` - Skrypt do wdrożenia aplikacji na serwer produkcyjny (kopiowanie plików lokalnych)
 - `deploy_from_github.sh` - Skrypt do wdrożenia aplikacji na serwer produkcyjny (pobieranie z GitHub)
@@ -73,7 +73,7 @@ Skrypt instalacyjny:
 - Zainstaluje niezbędne zależności (Docker, Docker Compose, Git)
 - Sklonuje repozytorium z GitHuba
 - Skonfiguruje certyfikaty SSL
-- Przygotuje plik .env.prod
+- Przygotuje plik .env
 
 ### 2. Konfiguracja serwera
 
@@ -90,14 +90,14 @@ Skrypt ten:
 - Zainstaluje Docker i Docker Compose (jeśli nie są zainstalowane)
 - Skonfiguruje certyfikaty SSL
 - Wygeneruje bezpieczny klucz dla Django
-- Zaktualizuje plik .env.prod
+- Zaktualizuje plik .env
 
-### 3. Edycja pliku .env.prod (WAŻNE!)
+### 3. Edycja pliku .env (WAŻNE!)
 
-Po uruchomieniu skryptu konfiguracyjnego, **koniecznie** należy edytować plik .env.prod, aby ustawić bezpieczne hasło dla bazy danych i skonfigurować inne zmienne środowiskowe:
+Po uruchomieniu skryptu konfiguracyjnego, **koniecznie** należy edytować plik .env, aby ustawić bezpieczne hasło dla bazy danych i skonfigurować inne zmienne środowiskowe:
 
 ```bash
-nano kindle_dict/.env.prod
+nano kindle_dict/.env
 ```
 
 Zwróć szczególną uwagę na następujące zmienne:
@@ -113,17 +113,10 @@ Error: Database is uninitialized and superuser password is not specified.
        superuser.
 ```
 
-Ponadto, podczas wykonywania poleceń Docker Compose, mogą pojawić się ostrzeżenia o brakujących zmiennych środowiskowych:
-
-```
-WARN[0000] The "DB_USER" variable is not set. Defaulting to a blank string. 
-WARN[0000] The "DB_PASSWORD" variable is not set. Defaulting to a blank string. 
-WARN[0000] The "DB_NAME" variable is not set. Defaulting to a blank string. 
-```
 
 ### 4. Uruchomienie aplikacji
 
-Po zakończeniu konfiguracji i **po edycji pliku .env.prod**, uruchom aplikację:
+Po zakończeniu konfiguracji i **po edycji pliku .env**, uruchom aplikację:
 
 ```bash
 cd kindle_dict
@@ -290,24 +283,18 @@ docker-compose -f docker-compose.prod.yml exec web python manage.py collectstati
 
 ### Problem z interpolacją zmiennych środowiskowych w Docker Compose
 
-Jeśli podczas uruchamiania kontenerów pojawią się ostrzeżenia o brakujących zmiennych środowiskowych, takie jak:
+Docker Compose w pierwszej kolejności "wstrzykuje" zmienne "z zewnątrz" (czyli z pliku `.env` lub zmiennych systemowych powłoki) do samego pliku docker-compose – dopiero potem uruchamia kontenery i czyta sekcję `env_file`. 
 
-```
-WARN[0000] The "DB_USER" variable is not set. Defaulting to a blank string. 
-WARN[0000] The "DB_PASSWORD" variable is not set. Defaulting to a blank string. 
-WARN[0000] The "DB_NAME" variable is not set. Defaulting to a blank string. 
-```
-
-Jest to spowodowane tym, że Docker Compose nie wczytuje zmiennych środowiskowych z pliku `.env.prod` do interpolacji w pliku `docker-compose.prod.yml`. W pliku `docker-compose.prod.yml` bezpośrednio ustawiliśmy wartości zmiennych środowiskowych dla kontenera bazy danych:
+W pliku `docker-compose.prod.yml` używamy składni `${DB_USER}`, `${DB_PASSWORD}` i `${DB_NAME}`, które są zastępowane wartościami z pliku `.env`. Dlatego ważne jest, aby plik `.env` zawierał poprawne wartości tych zmiennych.
 
 ```yaml
 environment:
-  - POSTGRES_USER=kindle_dict_user
-  - POSTGRES_PASSWORD=wIPO$#IO#^
-  - POSTGRES_DB=kindle_dict
+  - POSTGRES_USER=${DB_USER}
+  - POSTGRES_PASSWORD=${DB_PASSWORD}
+  - POSTGRES_DB=${DB_NAME}
 ```
 
-Jeśli chcesz zmienić te wartości, musisz edytować plik `docker-compose.prod.yml`.
+Jeśli chcesz zmienić te wartości, musisz edytować plik `.env`.
 
 ### Sprawdzanie statusu kontenerów
 

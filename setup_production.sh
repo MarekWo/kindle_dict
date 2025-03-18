@@ -58,17 +58,26 @@ chmod 644 kindle_dict/nginx/ssl/*.pem
 echo -e "${YELLOW}Generowanie bezpiecznego klucza dla Django...${NC}"
 DJANGO_SECRET_KEY=$(openssl rand -base64 50 | tr -dc 'a-zA-Z0-9!@#$%^&*(-_=+)' | head -c50)
 
-# Aktualizacja pliku .env.prod
-echo -e "${YELLOW}Aktualizacja pliku .env.prod...${NC}"
-sed -i "s/SECRET_KEY=zmień_to_na_bezpieczny_klucz_produkcyjny/SECRET_KEY=$DJANGO_SECRET_KEY/" kindle_dict/.env.prod
-echo -e "${GREEN}Plik .env.prod został zaktualizowany z bezpiecznym kluczem.${NC}"
+# Aktualizacja pliku .env
+echo -e "${YELLOW}Aktualizacja pliku .env...${NC}"
+if [ -f "kindle_dict/.env" ]; then
+    sed -i "s/SECRET_KEY=your_secret_key_here/SECRET_KEY=$DJANGO_SECRET_KEY/" kindle_dict/.env
+    echo -e "${GREEN}Plik .env został zaktualizowany z bezpiecznym kluczem.${NC}"
+else
+    echo -e "${YELLOW}Tworzenie pliku .env...${NC}"
+    cp kindle_dict/.env.example kindle_dict/.env
+    sed -i "s/DEBUG=True/DEBUG=False/" kindle_dict/.env
+    sed -i "s/SECRET_KEY=your_secret_key_here/SECRET_KEY=$DJANGO_SECRET_KEY/" kindle_dict/.env
+    sed -i "s/ALLOWED_HOSTS=localhost,127.0.0.1/ALLOWED_HOSTS=dict.c11.net.pl,localhost,127.0.0.1/" kindle_dict/.env
+    echo -e "${GREEN}Plik .env został utworzony.${NC}"
+fi
 
-echo -e "${RED}WAŻNE: Musisz zaktualizować hasło bazy danych w pliku .env.prod przed uruchomieniem kontenerów!${NC}"
+echo -e "${RED}WAŻNE: Musisz zaktualizować hasło bazy danych w pliku .env przed uruchomieniem kontenerów!${NC}"
 echo -e "${RED}Jeśli tego nie zrobisz, baza danych nie uruchomi się poprawnie.${NC}"
-echo -e "${YELLOW}nano kindle_dict/.env.prod${NC}"
+echo -e "${YELLOW}nano kindle_dict/.env${NC}"
 
 echo -e "${GREEN}Konfiguracja środowiska produkcyjnego zakończona.${NC}"
-echo -e "${RED}WAŻNE: Przed uruchomieniem aplikacji, upewnij się, że zaktualizowałeś plik .env.prod!${NC}"
+echo -e "${RED}WAŻNE: Przed uruchomieniem aplikacji, upewnij się, że zaktualizowałeś plik .env!${NC}"
 echo -e "${GREEN}Aby uruchomić aplikację, wykonaj:${NC}"
 echo -e "${YELLOW}cd kindle_dict${NC}"
 echo -e "${YELLOW}docker-compose -f docker-compose.prod.yml up -d${NC}"
