@@ -18,6 +18,43 @@ Skrypt `process_kindlegen_jobs.py` monitoruje katalog `src/media/kindlegen_jobs`
 - Wine (na systemach Linux/macOS) lub natywny kindlegen.exe (na Windows)
 - Dostęp do katalogu `src/media/kindlegen_jobs`
 
+#### Instalacja Wine na Ubuntu/Debian (dla kindlegen.exe)
+
+Kindlegen.exe jest aplikacją 32-bitową, więc wymaga zainstalowania wine32. Poniżej znajduje się procedura instalacji na Ubuntu/Debian:
+
+1. Zainstaluj podstawową wersję Wine:
+```bash
+sudo apt install wine
+```
+
+2. Włącz obsługę architektury 32-bitowej:
+```bash
+sudo dpkg --add-architecture i386
+```
+
+3. Zaktualizuj repozytoria:
+```bash
+sudo apt update
+```
+
+4. Zainstaluj wine32:
+```bash
+sudo apt install wine32
+```
+
+5. Sprawdź instalację:
+```bash
+wine --version
+```
+
+**Uwaga**: Podczas uruchamiania kindlegen.exe z użyciem wine w interfejsie użytkownika, warto przekierować błędy standardowe do /dev/null, aby uniknąć komunikatów o błędach związanych z wyświetlaniem:
+
+```bash
+wine kindlegen.exe ksiazka.opf 2>/dev/null
+```
+
+W przypadku skryptu `process_kindlegen_jobs.py` działającego w tle, te komunikaty nie są widoczne i nie wpływają na działanie.
+
 ### Użycie
 
 ```bash

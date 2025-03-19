@@ -23,6 +23,97 @@ W repozytorium znajdują się następujące pliki konfiguracyjne do wdrożenia p
 
 ## Proces wdrażania
 
+### Ważna uwaga: Uruchomienie skryptu process_kindlegen_jobs.py
+
+Aby aplikacja mogła generować pliki .mobi, konieczne jest uruchomienie skryptu `process_kindlegen_jobs.py` na serwerze produkcyjnym. Skrypt ten musi działać poza kontenerem Docker, bezpośrednio na hoście.
+
+1. Zainstaluj wymagane zależności na serwerze:
+   ```bash
+   # Instalacja Wine (wymagane dla kindlegen.exe)
+   sudo apt install wine
+   
+   # Włączenie obsługi architektury 32-bitowej (kindlegen.exe jest 32-bitowy)
+   sudo dpkg --add-architecture i386
+   
+   # Aktualizacja repozytoriów
+   sudo apt update
+   
+   # Instalacja wine32
+   sudo apt install wine32
+   ```
+
+2. Uruchom skrypt w trybie ciągłym (zalecane jako usługa systemowa):
+
+   **UWAGA**: Standardowy użytkownik może nie mieć dostępu do katalogu `/var/lib/docker/volumes`. W takim przypadku należy utworzyć alternatywny katalog i skonfigurować aplikację, aby korzystała z niego.
+
+   ```bash
+   # Utwórz alternatywny katalog dla plików kindlegen
+   sudo mkdir -p /opt/kindle_dict/media/kindlegen_jobs
+
+   # Ustaw odpowiednie uprawnienia
+   sudo chown -R marek:marek /opt/kindle_dict
+
+   # Utwórz plik usługi systemowej
+   sudo nano /etc/systemd/system/kindlegen-processor.service
+   ```
+
+   Zawartość pliku:
+   ```
+   [Unit]
+   Description=Kindle Dictionary Kindlegen Processor
+   After=network.target
+
+   [Service]
+   User=marek
+   WorkingDirectory=/home/marek/kindle_dict
+   ExecStart=/usr/bin/python3 /home/marek/kindle_dict/scripts/process_kindlegen_jobs.py --media-root=/opt/kindle_dict/media --kindlegen-path=/home/marek/kindle_dict/src/tools/kindlegen.exe
+   Restart=on-failure
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+   Następnie:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable kindlegen-processor
+   sudo systemctl start kindlegen-processor
+   ```
+
+   **WAŻNE**: Jeśli używasz alternatywnego katalogu `/opt/kindle_dict/media`, musisz również skonfigurować kontenery Docker, aby korzystały z tego samego katalogu. W pliku `docker-compose.prod.yml` zmień:
+
+   ```yaml
+   volumes:
+     - media_volume:/app/media
+   ```
+
+   na:
+
+   ```yaml
+   volumes:
+     - /opt/kindle_dict/media:/app/media
+   ```
+
+   Alternatywnie, możesz utworzyć dowiązanie symboliczne:
+
+   ```bash
+   sudo ln -s /opt/kindle_dict/media /var/lib/docker/volumes/kindle_dict_media_volume/_data
+   ```
+
+3. Alternatywnie, możesz uruchomić skrypt w tle za pomocą nohup:
+   ```bash
+   nohup python scripts/process_kindlegen_jobs.py --media-root=/var/lib/docker/volumes/kindle_dict_media_volume/_data --kindlegen-path=./src/tools/kindlegen.exe > kindlegen_processor.log 2>&1 &
+   ```
+
+4. Sprawdź, czy skrypt działa poprawnie:
+   ```bash
+   # Dla usługi systemowej
+   sudo systemctl status kindlegen-processor
+   
+   # Dla nohup
+   tail -f kindlegen_processor.log
+   ```
+
 Istnieją dwie metody wdrażania aplikacji na serwer produkcyjny:
 
 ### Metoda 1: Wdrożenie z lokalnego repozytorium

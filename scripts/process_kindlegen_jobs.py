@@ -81,7 +81,8 @@ def process_job(job_path, job_data, kindlegen_path, wine_path):
     """Process a kindlegen job."""
     logger.info(f"Processing job in {job_path}")
     
-    opf_file = os.path.join(job_path, job_data.get('opf_file'))
+    opf_filename = job_data.get('opf_file')
+    opf_file = os.path.join(job_path, opf_filename)
     output_file = job_data.get('output_file')
     
     if not os.path.exists(opf_file):
@@ -92,51 +93,62 @@ def process_job(job_path, job_data, kindlegen_path, wine_path):
         # Determine if we're on Windows or not
         is_windows = os.name == 'nt'
         
-        # Construct command based on OS
-        if is_windows:
-            # On Windows, run kindlegen directly
-            command = [kindlegen_path, opf_file]
-        else:
-            # On Linux/macOS, use wine
-            command = [wine_path, kindlegen_path, opf_file]
+        # Zapamiętaj bieżący katalog
+        original_dir = os.getcwd()
         
-        # Add output file if specified
-        if output_file:
-            command.extend(['-o', output_file])
-        
-        logger.info(f"Running command: {' '.join(command)}")
-        
-        # Run kindlegen
-        result = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False
-        )
-        
-        # Log output
-        logger.info(f"Command output: {result.stdout}")
-        if result.stderr:
-            logger.warning(f"Command error: {result.stderr}")
-        
-        # Check if successful
-        if result.returncode <= 1:  # 0 = success, 1 = success with warnings
-            mobi_file = output_file if output_file else os.path.splitext(job_data.get('opf_file'))[0] + '.mobi'
-            mobi_path = os.path.join(job_path, mobi_file)
+        try:
+            # Przejdź do katalogu zadania, aby używać względnych ścieżek
+            os.chdir(job_path)
             
-            if os.path.exists(mobi_path) and os.path.getsize(mobi_path) > 0:
-                update_job_status(job_path, 'completed', output=mobi_file)
-                logger.info(f"Job completed successfully: {mobi_path}")
-                return True
+            # Construct command based on OS, używając tylko nazwy pliku zamiast pełnej ścieżki
+            if is_windows:
+                # On Windows, run kindlegen directly
+                command = [kindlegen_path, opf_filename]
             else:
-                update_job_status(job_path, 'failed', f"MOBI file not found or empty: {mobi_path}")
-                logger.error(f"MOBI file not found or empty: {mobi_path}")
+                # On Linux/macOS, use wine
+                command = [wine_path, kindlegen_path, opf_filename]
+            
+            # Add output file if specified
+            if output_file:
+                command.extend(['-o', output_file])
+            
+            logger.info(f"Running command from directory {job_path}: {' '.join(command)}")
+            
+            # Run kindlegen
+            result = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False
+            )
+            
+            # Log output
+            logger.info(f"Command output: {result.stdout}")
+            if result.stderr:
+                logger.warning(f"Command error: {result.stderr}")
+            
+            # Check if successful
+            if result.returncode <= 1:  # 0 = success, 1 = success with warnings
+                mobi_file = output_file if output_file else os.path.splitext(job_data.get('opf_file'))[0] + '.mobi'
+                mobi_path = os.path.join(job_path, mobi_file)
+                
+                if os.path.exists(mobi_path) and os.path.getsize(mobi_path) > 0:
+                    update_job_status(job_path, 'completed', output=mobi_file)
+                    logger.info(f"Job completed successfully: {mobi_path}")
+                    return True
+                else:
+                    update_job_status(job_path, 'failed', f"MOBI file not found or empty: {mobi_path}")
+                    logger.error(f"MOBI file not found or empty: {mobi_path}")
+                    return False
+            else:
+                update_job_status(job_path, 'failed', f"kindlegen failed with code {result.returncode}: {result.stdout}")
+                logger.error(f"kindlegen failed with code {result.returncode}")
                 return False
-        else:
-            update_job_status(job_path, 'failed', f"kindlegen failed with code {result.returncode}: {result.stdout}")
-            logger.error(f"kindlegen failed with code {result.returncode}")
-            return False
+                
+        finally:
+            # Wróć do oryginalnego katalogu
+            os.chdir(original_dir)
     
     except Exception as e:
         update_job_status(job_path, 'failed', f"Exception: {str(e)}")

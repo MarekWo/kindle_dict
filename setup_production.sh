@@ -44,9 +44,47 @@ else
     echo -e "${GREEN}Docker Compose jest już zainstalowany.${NC}"
 fi
 
+# Instalacja Wine i Wine32 (potrzebne dla kindlegen.exe)
+echo -e "${YELLOW}Instalacja Wine i Wine32...${NC}"
+if ! command -v wine &> /dev/null; then
+    echo -e "${YELLOW}Wine nie jest zainstalowany. Instaluję...${NC}"
+    sudo apt-get install -y wine
+    
+    # Włączenie obsługi architektury 32-bitowej
+    echo -e "${YELLOW}Włączanie obsługi architektury 32-bitowej...${NC}"
+    sudo dpkg --add-architecture i386
+    sudo apt-get update
+    
+    # Instalacja wine32
+    echo -e "${YELLOW}Instalacja wine32...${NC}"
+    sudo apt-get install -y wine32
+    
+    echo -e "${GREEN}Wine i Wine32 zostały zainstalowane.${NC}"
+else
+    echo -e "${GREEN}Wine jest już zainstalowany. Sprawdzam wine32...${NC}"
+    if dpkg -l | grep -q wine32; then
+        echo -e "${GREEN}Wine32 jest już zainstalowany.${NC}"
+    else
+        echo -e "${YELLOW}Wine32 nie jest zainstalowany. Instaluję...${NC}"
+        # Włączenie obsługi architektury 32-bitowej
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        
+        # Instalacja wine32
+        sudo apt-get install -y wine32
+        echo -e "${GREEN}Wine32 został zainstalowany.${NC}"
+    fi
+fi
+
 # Tworzenie katalogów dla projektu
 echo -e "${YELLOW}Tworzenie katalogów dla projektu...${NC}"
 mkdir -p kindle_dict/{logs,nginx/ssl}
+
+# Tworzenie katalogu dla plików kindlegen
+echo -e "${YELLOW}Tworzenie katalogu dla plików kindlegen...${NC}"
+sudo mkdir -p /opt/kindle_dict/media/kindlegen_jobs
+sudo chown -R $USER:$USER /opt/kindle_dict
+echo -e "${GREEN}Katalog /opt/kindle_dict/media został utworzony.${NC}"
 
 # Kopiowanie certyfikatów SSL
 echo -e "${YELLOW}Kopiowanie certyfikatów SSL...${NC}"
@@ -87,3 +125,38 @@ echo -e "${YELLOW}docker-compose -f docker-compose.prod.yml exec web python mana
 
 echo -e "${YELLOW}Aby utworzyć superużytkownika, wykonaj:${NC}"
 echo -e "${YELLOW}docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser${NC}"
+
+# Konfiguracja usługi systemowej kindlegen-processor
+echo -e "${YELLOW}Konfiguracja usługi systemowej kindlegen-processor...${NC}"
+KINDLEGEN_SERVICE_FILE="/etc/systemd/system/kindlegen-processor.service"
+
+# Tworzenie pliku usługi systemowej
+echo -e "${YELLOW}Tworzenie pliku usługi systemowej...${NC}"
+sudo tee $KINDLEGEN_SERVICE_FILE > /dev/null << EOL
+[Unit]
+Description=Kindle Dictionary Kindlegen Processor
+After=network.target
+
+[Service]
+User=$USER
+WorkingDirectory=$PWD/kindle_dict
+ExecStart=/usr/bin/python3 $PWD/kindle_dict/scripts/process_kindlegen_jobs.py --media-root=/opt/kindle_dict/media --kindlegen-path=$PWD/kindle_dict/src/tools/kindlegen.exe
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+# Przeładowanie konfiguracji systemd
+echo -e "${YELLOW}Przeładowanie konfiguracji systemd...${NC}"
+sudo systemctl daemon-reload
+
+# Włączenie usługi
+echo -e "${YELLOW}Włączenie usługi kindlegen-processor...${NC}"
+sudo systemctl enable kindlegen-processor
+
+echo -e "${GREEN}Usługa kindlegen-processor została skonfigurowana.${NC}"
+echo -e "${YELLOW}Aby uruchomić usługę, wykonaj:${NC}"
+echo -e "${YELLOW}sudo systemctl start kindlegen-processor${NC}"
+echo -e "${YELLOW}Aby sprawdzić status usługi, wykonaj:${NC}"
+echo -e "${YELLOW}sudo systemctl status kindlegen-processor${NC}"
