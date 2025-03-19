@@ -6,7 +6,7 @@ Ten dokument zawiera instrukcje dotyczące wdrażania aplikacji Kindle Dictionar
 
 - Serwer z systemem Ubuntu
 - Dostęp SSH do serwera
-- Certyfikaty SSL dla domeny dict.c11.net.pl
+- Certyfikaty SSL dla domeny twoj.serwer.produkcyjny
 
 ## Przygotowane pliki
 
@@ -51,7 +51,7 @@ Aby aplikacja mogła generować pliki .mobi, konieczne jest uruchomienie skryptu
    sudo mkdir -p /opt/kindle_dict/media/kindlegen_jobs
 
    # Ustaw odpowiednie uprawnienia
-   sudo chown -R marek:marek /opt/kindle_dict
+   sudo chown -R twoj_uzytkownik:twoj_uzytkownik /opt/kindle_dict
 
    # Utwórz plik usługi systemowej
    sudo nano /etc/systemd/system/kindlegen-processor.service
@@ -158,7 +158,7 @@ Skrypt ten:
 3. Zaloguj się na serwer i uruchom skrypt instalacyjny:
 
 ```bash
-ssh marek@dict.c11.net.pl
+ssh twoj_uzytkownik@twoj.serwer.produkcyjny
 ./deploy_kindle_dict.sh
 ```
 
@@ -173,7 +173,7 @@ Skrypt instalacyjny:
 Po skopiowaniu plików na serwer, zaloguj się na serwer i dokończ konfigurację:
 
 ```bash
-ssh marek@dict.c11.net.pl
+ssh twoj_uzytkownik@twoj.serwer.produkcyjny
 cd kindle_dict
 ./setup_production.sh
 ```
@@ -237,13 +237,13 @@ docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperu
 Po zakończeniu wdrażania, aplikacja będzie dostępna pod adresem:
 
 ```
-https://dict.c11.net.pl
+https://twoj.serwer.produkcyjny
 ```
 
 Panel administracyjny będzie dostępny pod adresem:
 
 ```
-https://dict.c11.net.pl/admin/
+https://twoj.serwer.produkcyjny/admin/
 ```
 
 ## Zarządzanie aplikacją
@@ -297,7 +297,7 @@ git push
 ./deploy_from_github.sh
 
 # Na serwerze
-ssh marek@dict.c11.net.pl
+ssh twoj_uzytkownik@twoj.serwer.produkcyjny
 cd kindle_dict
 git pull  # Pobierz najnowsze zmiany z GitHuba
 docker-compose -f docker-compose.prod.yml down
@@ -321,7 +321,7 @@ Skrypt ten utworzy na serwerze plik `update_kindle_dict.sh`, który:
 Następnie, aby zaktualizować aplikację, wystarczy uruchomić:
 
 ```bash
-ssh marek@dict.c11.net.pl "./update_kindle_dict.sh"
+ssh twoj_uzytkownik@twoj.serwer.produkcyjny "./update_kindle_dict.sh"
 ```
 
 Ten sposób aktualizacji jest najbardziej zalecany, ponieważ automatyzuje wszystkie niezbędne kroki.
@@ -348,7 +348,7 @@ proxy_set_header X-Forwarded-Server $host;
 2. Upewnij się, że w pliku `src/kindle_dict/settings/prod.py` jest ustawiona lista zaufanych źródeł dla CSRF:
 
 ```python
-CSRF_TRUSTED_ORIGINS = ["https://dict.c11.net.pl"]
+CSRF_TRUSTED_ORIGINS = ["https://twoj.serwer.produkcyjny"]
 ```
 
 ### Problem z podwójnymi przekierowaniami SSL
@@ -368,7 +368,7 @@ SECURE_SSL_REDIRECT = False  # Nginx już obsługuje przekierowania
 ```nginx
 server {
     listen 80;
-    server_name dict.c11.net.pl;
+    server_name twoj.serwer.produkcyjny;
     
     # Przekierowanie HTTP na HTTPS
     location / {
@@ -492,7 +492,7 @@ chmod +x ~/ssl/config/renewal-hooks/post/certbot-renewal-hook.sh
 
 ```bash
 # Dodaj ścieżkę do skryptu w konfiguracji certbota
-echo "renew_hook = ~/ssl/config/renewal-hooks/post/certbot-renewal-hook.sh" >> ~/ssl/config/renewal/dict.c11.net.pl.conf
+echo "renew_hook = ~/ssl/config/renewal-hooks/post/certbot-renewal-hook.sh" >> ~/ssl/config/renewal/twoj.serwer.produkcyjny.conf
 ```
 
 Szczegółowe instrukcje dotyczące wdrożenia tego rozwiązania znajdują się w pliku `SSL_RENEWAL_README.md`.
@@ -503,7 +503,7 @@ Jeśli z jakiegoś powodu powyższe rozwiązanie nie działa, można ręcznie sk
 
 ```bash
 # Ustaw ścieżkę do certyfikatów Let's Encrypt
-SSL_CERT_PATH="$HOME/ssl/config/live/dict.c11.net.pl"
+SSL_CERT_PATH="$HOME/ssl/config/live/twoj.serwer.produkcyjny"
 
 # Kopiuj certyfikaty
 cp "${SSL_CERT_PATH}/fullchain.pem" kindle_dict/nginx/ssl/
