@@ -41,6 +41,9 @@ SECURE_HSTS_PRELOAD = True
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = ["https://dict.c11.net.pl"]
 
+# Site URL for absolute URLs
+SITE_URL = "https://dict.c11.net.pl"
+
 # Static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 

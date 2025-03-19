@@ -127,13 +127,13 @@ echo -e \"\${GREEN}Aby uruchomić aplikację, wykonaj:\${NC}\"
 echo -e \"\${YELLOW}cd \${APP_DIR}\${NC}\"
 echo -e \"\${YELLOW}docker-compose -f docker-compose.prod.yml up -d\${NC}\"
 
-echo -e \"\${YELLOW}Aby wykonać migracje bazy danych, wykonaj:\${NC}\"
+echo -e \"\${GREEN}Aby wykonać migracje bazy danych, wykonaj:\${NC}\"
 echo -e \"\${YELLOW}docker-compose -f docker-compose.prod.yml exec web python manage.py migrate\${NC}\"
 
-echo -e \"\${YELLOW}Aby zebrać pliki statyczne, wykonaj:\${NC}\"
+echo -e \"\${GREEN}Aby zebrać pliki statyczne, wykonaj:\${NC}\"
 echo -e \"\${YELLOW}docker-compose -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput --settings=kindle_dict.settings.prod\${NC}\"
 
-echo -e \"\${YELLOW}Aby utworzyć superużytkownika, wykonaj:\${NC}\"
+echo -e \"\${GREEN}Aby utworzyć superużytkownika, wykonaj:\${NC}\"
 echo -e \"\${YELLOW}docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser\${NC}\"
 EOL"
 

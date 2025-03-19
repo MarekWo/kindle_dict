@@ -99,6 +99,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default auto field for models
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Site URL for absolute URLs
+SITE_URL = env('SITE_URL', default='http://localhost:8000')
+
 # Celery settings
 CELERY_BROKER_URL = f"redis://{env('REDIS_HOST', default='redis')}:{env('REDIS_PORT', default='6379')}/0"
 CELERY_RESULT_BACKEND = f"redis://{env('REDIS_HOST', default='redis')}:{env('REDIS_PORT', default='6379')}/0"

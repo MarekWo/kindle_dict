@@ -29,7 +29,7 @@ echo -e "${GREEN}Certyfikaty zostały skopiowane.${NC}"
 
 # Restart kontenera nginx
 echo -e "${YELLOW}Restartowanie kontenera nginx...${NC}"
-docker restart $CONTAINER_NAME
+cd $HOME/kindle_dict && docker-compose -f docker-compose.prod.yml restart nginx
 
 echo -e "${GREEN}Kontener nginx został zrestartowany.${NC}"
 echo -e "${GREEN}Odnowione certyfikaty są teraz używane przez serwer.${NC}"

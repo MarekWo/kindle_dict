@@ -171,7 +171,7 @@ def send_dictionary_completion_email(dictionary):
         <p>Witaj {creator_name},</p>
         <p>Twój słownik <strong>{dictionary_name}</strong> został pomyślnie utworzony.</p>
         <p>Możesz go pobrać z naszej strony:</p>
-        <p><a href="http://localhost:8000/dictionary/{dictionary_id}/">Pobierz słownik</a></p>
+        <p><a href="{site_url}/dictionary/{dictionary_id}/">Pobierz słownik</a></p>
         <br>
         <p>Pozdrawiamy,<br>
         Zespół Kindle Dictionary Creator</p>
@@ -180,7 +180,8 @@ def send_dictionary_completion_email(dictionary):
     """.format(
         creator_name=dictionary.creator_name,
         dictionary_name=dictionary.name,
-        dictionary_id=dictionary.id
+        dictionary_id=dictionary.id,
+        site_url=settings.SITE_URL
     )
     
     # Send the email to the creator
@@ -223,11 +224,12 @@ def send_test_email(to_email, smtp_config=None):
         <h2>Test konfiguracji SMTP</h2>
         <p>To jest testowa wiadomość z aplikacji Kindle Dictionary Creator.</p>
         <p>Jeśli otrzymałeś tę wiadomość, oznacza to, że konfiguracja SMTP działa poprawnie.</p>
+        <p>Adres strony: <a href="{site_url}">{site_url}</a></p>
         <br>
         <p>Pozdrawiamy,<br>
         Zespół Kindle Dictionary Creator</p>
     </body>
     </html>
-    """
+    """.format(site_url=settings.SITE_URL)
     
     return send_email(to_email, subject, html_content, smtp_config=smtp_config)
