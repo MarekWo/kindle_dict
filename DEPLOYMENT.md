@@ -466,51 +466,44 @@ docker-compose -f docker-compose.prod.yml restart [nazwa_kontenera]
 
 ## Automatyczne odnawianie certyfikatów SSL
 
-Certyfikaty SSL są skonfigurowane do automatycznego odnawiania na serwerze przez Let's Encrypt. Aby odnowione certyfikaty były automatycznie dostępne dla aplikacji, przygotowano dwa rozwiązania:
+Certyfikaty SSL są skonfigurowane do automatycznego odnawiania na serwerze przez Let's Encrypt. Aby odnowione certyfikaty były automatycznie dostępne dla aplikacji, zalecamy użycie skryptu hook, który będzie automatycznie kopiował odnowione certyfikaty do katalogu nginx/ssl i restartował kontener nginx.
 
-### Rozwiązanie 1: Bezpośrednie montowanie katalogu z certyfikatami (ZALECANE)
+### Skrypt hook po odnowieniu certyfikatu (ZALECANE)
 
-To rozwiązanie eliminuje potrzebę kopiowania certyfikatów, montując katalog z certyfikatami Let's Encrypt bezpośrednio do kontenera nginx.
+To rozwiązanie wykorzystuje mechanizm hooków Certbota, który pozwala na wykonanie skryptu po pomyślnym odnowieniu certyfikatu.
 
-1. Zatrzymaj bieżące kontenery:
-
-```bash
-cd ~/kindle_dict
-docker-compose -f docker-compose.prod.yml down
-```
-
-2. Zastąp plik `docker-compose.prod.yml` nowym plikiem `docker-compose.prod.direct-ssl.yml`:
+1. Skopiuj skrypt `certbot-renewal-hook.sh` do katalogu `~/ssl/config/renewal-hooks/post/` na serwerze:
 
 ```bash
-cp docker-compose.prod.direct-ssl.yml docker-compose.prod.yml
+mkdir -p ~/ssl/config/renewal-hooks/post/
+cp certbot-renewal-hook.sh ~/ssl/config/renewal-hooks/post/
+chmod +x ~/ssl/config/renewal-hooks/post/certbot-renewal-hook.sh
 ```
 
-3. Dodaj zmienną środowiskową `SSL_CERT_PATH` do pliku `.env`:
+2. Dostosuj zmienne w skrypcie do swojego środowiska (jeśli to konieczne).
+
+3. Przetestuj skrypt, uruchamiając go ręcznie:
 
 ```bash
-# Dodaj tę linię do pliku .env
-SSL_CERT_PATH=/etc/letsencrypt/live/twoja-domena.pl
+~/ssl/config/renewal-hooks/post/certbot-renewal-hook.sh
 ```
 
-4. Uruchom ponownie kontenery:
+4. Upewnij się, że skrypt jest wywoływany po odnowieniu certyfikatu:
 
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+# Dodaj ścieżkę do skryptu w konfiguracji certbota
+echo "renew_hook = ~/ssl/config/renewal-hooks/post/certbot-renewal-hook.sh" >> ~/ssl/config/renewal/dict.c11.net.pl.conf
 ```
 
-### Rozwiązanie 2: Skrypt hook po odnowieniu certyfikatu
-
-Alternatywnie, można użyć skryptu, który będzie automatycznie kopiował odnowione certyfikaty do katalogu nginx/ssl i restartował kontener nginx.
-
-Szczegółowe instrukcje dotyczące obu rozwiązań znajdują się w pliku `SSL_RENEWAL_README.md`.
+Szczegółowe instrukcje dotyczące wdrożenia tego rozwiązania znajdują się w pliku `SSL_RENEWAL_README.md`.
 
 ### Ręczne kopiowanie certyfikatów (niezalecane)
 
-Jeśli z jakiegoś powodu powyższe rozwiązania nie działają, można ręcznie skopiować odnowione certyfikaty do katalogu nginx/ssl:
+Jeśli z jakiegoś powodu powyższe rozwiązanie nie działa, można ręcznie skopiować odnowione certyfikaty do katalogu nginx/ssl:
 
 ```bash
 # Ustaw ścieżkę do certyfikatów Let's Encrypt
-SSL_CERT_PATH="$HOME/ssl/config/live/twoja-domena.pl"
+SSL_CERT_PATH="$HOME/ssl/config/live/dict.c11.net.pl"
 
 # Kopiuj certyfikaty
 cp "${SSL_CERT_PATH}/fullchain.pem" kindle_dict/nginx/ssl/
@@ -520,5 +513,3 @@ chmod 644 kindle_dict/nginx/ssl/*.pem
 # Restart kontenera nginx
 docker-compose -f docker-compose.prod.yml restart nginx
 ```
-
-**UWAGA**: Zastąp `$HOME/ssl/config/live/twoja-domena.pl` rzeczywistą ścieżką do katalogu z certyfikatami Let's Encrypt na Twoim serwerze. Domyślnie skrypt używa ścieżki `$HOME/ssl/config/live/dict.c11.net.pl`.
