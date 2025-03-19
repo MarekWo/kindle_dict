@@ -88,8 +88,11 @@ echo -e "${GREEN}Katalog /opt/kindle_dict/media został utworzony.${NC}"
 
 # Kopiowanie certyfikatów SSL
 echo -e "${YELLOW}Kopiowanie certyfikatów SSL...${NC}"
-cp /home/marek/ssl/config/live/dict.c11.net.pl/fullchain.pem kindle_dict/nginx/ssl/
-cp /home/marek/ssl/config/live/dict.c11.net.pl/privkey.pem kindle_dict/nginx/ssl/
+# Domyślna ścieżka dla certyfikatów Let's Encrypt, można dostosować
+SSL_CERT_PATH="${SSL_CERT_PATH:-$HOME/ssl/config/live/dict.c11.net.pl}"
+echo -e "${YELLOW}Używam ścieżki do certyfikatów: ${SSL_CERT_PATH}${NC}"
+cp "${SSL_CERT_PATH}/fullchain.pem" kindle_dict/nginx/ssl/
+cp "${SSL_CERT_PATH}/privkey.pem" kindle_dict/nginx/ssl/
 chmod 644 kindle_dict/nginx/ssl/*.pem
 
 # Generowanie bezpiecznego klucza dla Django

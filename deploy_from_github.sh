@@ -94,8 +94,11 @@ mkdir -p \"\${APP_DIR}/logs\" \"\${APP_DIR}/nginx/ssl\"
 
 # Kopiowanie certyfikatów SSL
 echo -e \"\${YELLOW}Kopiowanie certyfikatów SSL...\${NC}\"
-cp /home/marek/ssl/config/live/dict.c11.net.pl/fullchain.pem \"\${APP_DIR}/nginx/ssl/\"
-cp /home/marek/ssl/config/live/dict.c11.net.pl/privkey.pem \"\${APP_DIR}/nginx/ssl/\"
+# Domyślna ścieżka dla certyfikatów Let's Encrypt, można dostosować
+SSL_CERT_PATH=\"\${SSL_CERT_PATH:-\$HOME/ssl/config/live/dict.c11.net.pl}\"
+echo -e \"\${YELLOW}Używam ścieżki do certyfikatów: \${SSL_CERT_PATH}\${NC}\"
+cp \"\${SSL_CERT_PATH}/fullchain.pem\" \"\${APP_DIR}/nginx/ssl/\"
+cp \"\${SSL_CERT_PATH}/privkey.pem\" \"\${APP_DIR}/nginx/ssl/\"
 chmod 644 \"\${APP_DIR}/nginx/ssl/\"*.pem
 
 # Generowanie bezpiecznego klucza dla Django

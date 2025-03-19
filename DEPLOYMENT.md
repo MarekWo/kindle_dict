@@ -64,14 +64,16 @@ Aby aplikacja mogła generować pliki .mobi, konieczne jest uruchomienie skryptu
    After=network.target
 
    [Service]
-   User=marek
-   WorkingDirectory=/home/marek/kindle_dict
-   ExecStart=/usr/bin/python3 /home/marek/kindle_dict/scripts/process_kindlegen_jobs.py --media-root=/opt/kindle_dict/media --kindlegen-path=/home/marek/kindle_dict/src/tools/kindlegen.exe
+   User=$USER
+   WorkingDirectory=$PWD/kindle_dict
+   ExecStart=/usr/bin/python3 $PWD/kindle_dict/scripts/process_kindlegen_jobs.py --media-root=/opt/kindle_dict/media --kindlegen-path=$PWD/kindle_dict/src/tools/kindlegen.exe
    Restart=on-failure
 
    [Install]
    WantedBy=multi-user.target
    ```
+
+   **UWAGA**: Zastąp `$USER` i `$PWD` rzeczywistymi wartościami dla Twojego środowiska.
 
    Następnie:
    ```bash
@@ -464,11 +466,59 @@ docker-compose -f docker-compose.prod.yml restart [nazwa_kontenera]
 
 ## Automatyczne odnawianie certyfikatów SSL
 
-Certyfikaty SSL są już skonfigurowane do automatycznego odnawiania na serwerze. Jeśli jednak wystąpią problemy, można ręcznie skopiować odnowione certyfikaty do katalogu nginx/ssl:
+Certyfikaty SSL są skonfigurowane do automatycznego odnawiania na serwerze przez Let's Encrypt. Aby odnowione certyfikaty były automatycznie dostępne dla aplikacji, przygotowano dwa rozwiązania:
+
+### Rozwiązanie 1: Bezpośrednie montowanie katalogu z certyfikatami (ZALECANE)
+
+To rozwiązanie eliminuje potrzebę kopiowania certyfikatów, montując katalog z certyfikatami Let's Encrypt bezpośrednio do kontenera nginx.
+
+1. Zatrzymaj bieżące kontenery:
 
 ```bash
-cp /home/marek/ssl/config/live/dict.c11.net.pl/fullchain.pem kindle_dict/nginx/ssl/
-cp /home/marek/ssl/config/live/dict.c11.net.pl/privkey.pem kindle_dict/nginx/ssl/
+cd ~/kindle_dict
+docker-compose -f docker-compose.prod.yml down
+```
+
+2. Zastąp plik `docker-compose.prod.yml` nowym plikiem `docker-compose.prod.direct-ssl.yml`:
+
+```bash
+cp docker-compose.prod.direct-ssl.yml docker-compose.prod.yml
+```
+
+3. Dodaj zmienną środowiskową `SSL_CERT_PATH` do pliku `.env`:
+
+```bash
+# Dodaj tę linię do pliku .env
+SSL_CERT_PATH=/etc/letsencrypt/live/twoja-domena.pl
+```
+
+4. Uruchom ponownie kontenery:
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Rozwiązanie 2: Skrypt hook po odnowieniu certyfikatu
+
+Alternatywnie, można użyć skryptu, który będzie automatycznie kopiował odnowione certyfikaty do katalogu nginx/ssl i restartował kontener nginx.
+
+Szczegółowe instrukcje dotyczące obu rozwiązań znajdują się w pliku `SSL_RENEWAL_README.md`.
+
+### Ręczne kopiowanie certyfikatów (niezalecane)
+
+Jeśli z jakiegoś powodu powyższe rozwiązania nie działają, można ręcznie skopiować odnowione certyfikaty do katalogu nginx/ssl:
+
+```bash
+# Ustaw ścieżkę do certyfikatów Let's Encrypt
+SSL_CERT_PATH="$HOME/ssl/config/live/twoja-domena.pl"
+
+# Kopiuj certyfikaty
+cp "${SSL_CERT_PATH}/fullchain.pem" kindle_dict/nginx/ssl/
+cp "${SSL_CERT_PATH}/privkey.pem" kindle_dict/nginx/ssl/
 chmod 644 kindle_dict/nginx/ssl/*.pem
+
+# Restart kontenera nginx
 docker-compose -f docker-compose.prod.yml restart nginx
 ```
+
+**UWAGA**: Zastąp `$HOME/ssl/config/live/twoja-domena.pl` rzeczywistą ścieżką do katalogu z certyfikatami Let's Encrypt na Twoim serwerze. Domyślnie skrypt używa ścieżki `$HOME/ssl/config/live/dict.c11.net.pl`.
