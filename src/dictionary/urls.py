@@ -24,4 +24,7 @@ urlpatterns = [
     # SMTP Configuration
     path('config/smtp/', views.SMTPConfigurationView.as_view(), name='smtp_config'),
     path('config/smtp/test/', views.test_smtp_email, name='test_smtp_email'),
+    
+    # Contact form
+    path('contact/', views.ContactMessageCreateView.as_view(), name='contact'),
 ]

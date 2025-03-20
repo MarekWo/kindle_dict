@@ -18,10 +18,10 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
 
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration
-from .forms import DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage
+from .forms import DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm, ContactMessageForm
 from .tasks import process_dictionary
-from .email_utils import send_test_email
+from .email_utils import send_test_email, send_contact_message_notification
 
 class DictionaryListView(ListView):
     """View to display a list of public dictionaries"""
@@ -367,6 +367,27 @@ class DictionaryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         
         # Show success message
         messages.success(self.request, _("Słownik został zaktualizowany i jest przetwarzany."))
+        
+        return redirect(self.get_success_url())
+
+
+class ContactMessageCreateView(CreateView):
+    """View for users to submit contact messages"""
+    model = ContactMessage
+    form_class = ContactMessageForm
+    template_name = 'dictionary/contact.html'
+    success_url = reverse_lazy('home')
+    
+    def form_valid(self, form):
+        """Process the form if it's valid"""
+        # Save the contact message
+        self.object = form.save()
+        
+        # Send notification to administrators
+        send_contact_message_notification(self.object)
+        
+        # Show success message
+        messages.success(self.request, _("Dziękujemy za wiadomość! Odpowiemy najszybciej jak to możliwe."))
         
         return redirect(self.get_success_url())
 

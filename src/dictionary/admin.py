@@ -7,7 +7,7 @@ Admin configuration for the Dictionary app.
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage
 
 @admin.register(Dictionary)
 class DictionaryAdmin(admin.ModelAdmin):
@@ -105,3 +105,37 @@ class SMTPConfigurationAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Prevent deletion of the configuration"""
         return False
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    """Admin for ContactMessage model"""
+    list_display = ('name', 'email', 'created_at', 'is_read')
+    list_filter = ('is_read', 'created_at')
+    search_fields = ('name', 'email', 'message')
+    readonly_fields = ('id', 'created_at')
+    fieldsets = (
+        (None, {
+            'fields': ('id', 'name', 'email', 'is_read')
+        }),
+        (_('Wiadomość'), {
+            'fields': ('message',)
+        }),
+        (_('Data'), {
+            'fields': ('created_at',)
+        }),
+    )
+    actions = ['mark_as_read', 'mark_as_unread']
+    
+    def mark_as_read(self, request, queryset):
+        """Admin action to mark selected messages as read"""
+        queryset.update(is_read=True)
+        self.message_user(request, _("Zaznaczone wiadomości zostały oznaczone jako przeczytane."))
+    
+    mark_as_read.short_description = _("Oznacz jako przeczytane")
+    
+    def mark_as_unread(self, request, queryset):
+        """Admin action to mark selected messages as unread"""
+        queryset.update(is_read=False)
+        self.message_user(request, _("Zaznaczone wiadomości zostały oznaczone jako nieprzeczytane."))
+    
+    mark_as_unread.short_description = _("Oznacz jako nieprzeczytane")

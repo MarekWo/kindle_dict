@@ -20,7 +20,7 @@ def get_smtp_config():
         logger.error(f"Error getting SMTP configuration: {e}")
         return None
 
-def send_email(to_email, subject, html_content, text_content=None, smtp_config=None):
+def send_email(to_email, subject, html_content, text_content=None, smtp_config=None, headers=None):
     """
     Send an email using the configured SMTP server.
     
@@ -30,6 +30,7 @@ def send_email(to_email, subject, html_content, text_content=None, smtp_config=N
         html_content (str): HTML content of the email
         text_content (str, optional): Plain text content of the email
         smtp_config (SMTPConfiguration, optional): SMTP configuration to use
+        headers (dict, optional): Additional headers to add to the email (e.g. Reply-To)
         
     Returns:
         bool: True if email was sent successfully, False otherwise
@@ -56,6 +57,11 @@ def send_email(to_email, subject, html_content, text_content=None, smtp_config=N
     msg['Subject'] = subject
     msg['From'] = f"{smtp_config.from_name} <{smtp_config.from_email}>"
     msg['To'] = to_email
+    
+    # Dodaj dodatkowe nagłówki, jeśli są
+    if headers:
+        for header_name, header_value in headers.items():
+            msg[header_name] = header_value
     
     # Ustaw treść
     msg.set_content(text_content)
@@ -233,3 +239,76 @@ def send_test_email(to_email, smtp_config=None):
     """.format(site_url=settings.SITE_URL)
     
     return send_email(to_email, subject, html_content, smtp_config=smtp_config)
+
+def send_contact_message_notification(contact_message):
+    """
+    Send a notification to administrators about a new contact message.
+    
+    Args:
+        contact_message: ContactMessage object that was created
+        
+    Returns:
+        bool: True if email was sent successfully, False otherwise
+    """
+    from django.contrib.auth import get_user_model
+    
+    # Get all superusers
+    User = get_user_model()
+    superusers = User.objects.filter(is_superuser=True)
+    
+    if not superusers:
+        logger.warning("No superusers found to notify about contact message")
+        return False
+    
+    # Prepare email content
+    subject = str(_("Nowa wiadomość kontaktowa"))
+    
+    # Format the message with line breaks for HTML
+    message_html = contact_message.message.replace('\n', '<br>')
+    
+    html_content = """
+    <html>
+    <body>
+        <h2>Nowa wiadomość kontaktowa</h2>
+        <p>Otrzymałeś nową wiadomość kontaktową:</p>
+        
+        <p><strong>Od:</strong> {name}</p>
+        <p><strong>E-mail:</strong> {email}</p>
+        <p><strong>Data:</strong> {date}</p>
+        <p><strong>Wiadomość:</strong></p>
+        <div style="padding: 10px; border-left: 4px solid #ccc; margin-left: 20px;">
+            {message}
+        </div>
+        
+        <p>Możesz zobaczyć wszystkie wiadomości w <a href="{site_url}/admin/dictionary/contactmessage/">panelu administracyjnym</a>.</p>
+        <br>
+        <p>Pozdrawiamy,<br>
+        System Kindle Dictionary Creator</p>
+    </body>
+    </html>
+    """.format(
+        name=contact_message.name or "Anonimowy",
+        email=contact_message.email or "Nie podano",
+        date=contact_message.created_at.strftime("%Y-%m-%d %H:%M"),
+        message=message_html,
+        site_url=settings.SITE_URL
+    )
+    
+    # Set up reply-to if email is provided
+    headers = {}
+    if contact_message.email:
+        if contact_message.name:
+            headers['Reply-To'] = f"{contact_message.name} <{contact_message.email}>"
+        else:
+            headers['Reply-To'] = contact_message.email
+    
+    # Send to all superusers
+    success = True
+    for user in superusers:
+        if user.email:
+            result = send_email(user.email, subject, html_content, headers=headers)
+            if not result:
+                logger.error(f"Failed to send contact message notification to {user.email}")
+                success = False
+    
+    return success

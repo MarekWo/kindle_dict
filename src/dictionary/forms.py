@@ -6,7 +6,7 @@ Forms for the Dictionary app.
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage
 from django.core.validators import FileExtensionValidator
 
 class DictionaryForm(forms.ModelForm):
@@ -61,6 +61,37 @@ class DictionaryForm(forms.ModelForm):
         # Either content or source_file must be provided
         if not content and not source_file:
             raise forms.ValidationError(_("Musisz albo podać zawartość, albo przesłać plik."))
+        
+        return cleaned_data
+
+
+class ContactMessageForm(forms.ModelForm):
+    """Form for contact messages"""
+    
+    class Meta:
+        model = ContactMessage
+        fields = ['name', 'email', 'message']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Twoje imię (opcjonalnie)')}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('Twój adres e-mail (opcjonalnie)')}),
+            'message': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': _('Twoja wiadomość')}),
+        }
+        labels = {
+            'name': _('Imię i nazwisko'),
+            'email': _('Adres e-mail'),
+            'message': _('Wiadomość'),
+        }
+        help_texts = {
+            'email': _('Opcjonalny adres e-mail, który zostanie użyty jako Reply-to w powiadomieniu.'),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        message = cleaned_data.get("message")
+        
+        # Message is required
+        if not message or not message.strip():
+            raise forms.ValidationError(_("Wiadomość jest wymagana."))
         
         return cleaned_data
 
