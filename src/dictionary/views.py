@@ -378,6 +378,13 @@ class ContactMessageCreateView(CreateView):
     template_name = 'dictionary/contact.html'
     success_url = reverse_lazy('home')
     
+    def dispatch(self, request, *args, **kwargs):
+        """Check if user is not authenticated"""
+        if request.user.is_authenticated:
+            messages.info(request, _("Zalogowani użytkownicy nie mogą korzystać z formularza kontaktowego. Prosimy o bezpośredni kontakt z administratorem."))
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
+    
     def form_valid(self, form):
         """Process the form if it's valid"""
         # Save the contact message

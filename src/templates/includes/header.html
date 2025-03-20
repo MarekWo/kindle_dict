@@ -24,10 +24,10 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dictionary:suggest' %}">Zaproponuj słownik</a>
                     </li>
-                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dictionary:contact' %}">Napisz do nas</a>
                     </li>
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated and user.is_staff %}
