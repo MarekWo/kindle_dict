@@ -21,9 +21,10 @@ urlpatterns = [
     # Dictionary suggestions
     path('suggest/', views.DictionarySuggestionCreateView.as_view(), name='suggest'),
     
-    # SMTP Configuration
+    # Configuration
     path('config/smtp/', views.SMTPConfigurationView.as_view(), name='smtp_config'),
     path('config/smtp/test/', views.test_smtp_email, name='test_smtp_email'),
+    path('config/captcha/', views.CaptchaConfigurationView.as_view(), name='captcha_config'),
     
     # Contact form
     path('contact/', views.ContactMessageCreateView.as_view(), name='contact'),

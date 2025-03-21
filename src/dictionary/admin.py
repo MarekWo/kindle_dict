@@ -7,7 +7,7 @@ Admin configuration for the Dictionary app.
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration
 
 @admin.register(Dictionary)
 class DictionaryAdmin(admin.ModelAdmin):
@@ -139,3 +139,28 @@ class ContactMessageAdmin(admin.ModelAdmin):
         self.message_user(request, _("Zaznaczone wiadomości zostały oznaczone jako nieprzeczytane."))
     
     mark_as_unread.short_description = _("Oznacz jako nieprzeczytane")
+
+@admin.register(CaptchaConfiguration)
+class CaptchaConfigurationAdmin(admin.ModelAdmin):
+    """Admin for CaptchaConfiguration model"""
+    list_display = ('provider', 'site_key', 'is_enabled', 'enable_login', 'enable_contact', 'enable_suggest', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (_('Dostawca'), {
+            'fields': ('provider', 'site_key', 'secret_key')
+        }),
+        (_('Ustawienia'), {
+            'fields': ('is_enabled', 'enable_login', 'enable_contact', 'enable_suggest')
+        }),
+        (_('Daty'), {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        """Only allow adding if no configuration exists"""
+        return not CaptchaConfiguration.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of the configuration"""
+        return False

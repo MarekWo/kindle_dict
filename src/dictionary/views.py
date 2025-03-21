@@ -18,10 +18,11 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
 
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage
-from .forms import DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm, ContactMessageForm
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration
+from .forms import DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm, ContactMessageForm, CaptchaConfigurationForm
 from .tasks import process_dictionary
 from .email_utils import send_test_email, send_contact_message_notification
+from .captcha_utils import verify_captcha_response, get_captcha_context, is_captcha_enabled
 
 class DictionaryListView(ListView):
     """View to display a list of public dictionaries"""
@@ -125,8 +126,23 @@ class DictionarySuggestionCreateView(CreateView):
             return redirect('home')
         return super().dispatch(request, *args, **kwargs)
     
+    def get_context_data(self, **kwargs):
+        """Add CAPTCHA context data"""
+        context = super().get_context_data(**kwargs)
+        context.update(get_captcha_context('suggest'))
+        return context
+    
     def form_valid(self, form):
         """Process the form if it's valid"""
+        # Verify CAPTCHA if enabled
+        if is_captcha_enabled('suggest'):
+            captcha_response = self.request.POST.get('cf-turnstile-response') or self.request.POST.get('g-recaptcha-response')
+            if not verify_captcha_response(captcha_response):
+                form.add_error(None, _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie."))
+                context = self.get_context_data(form=form)
+                context['captcha_error'] = _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie.")
+                return self.render_to_response(context)
+        
         # Save the suggestion instance first
         self.object = form.save(commit=False)
         
@@ -385,8 +401,23 @@ class ContactMessageCreateView(CreateView):
             return redirect('home')
         return super().dispatch(request, *args, **kwargs)
     
+    def get_context_data(self, **kwargs):
+        """Add CAPTCHA context data"""
+        context = super().get_context_data(**kwargs)
+        context.update(get_captcha_context('contact'))
+        return context
+    
     def form_valid(self, form):
         """Process the form if it's valid"""
+        # Verify CAPTCHA if enabled
+        if is_captcha_enabled('contact'):
+            captcha_response = self.request.POST.get('cf-turnstile-response') or self.request.POST.get('g-recaptcha-response')
+            if not verify_captcha_response(captcha_response):
+                form.add_error(None, _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie."))
+                context = self.get_context_data(form=form)
+                context['captcha_error'] = _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie.")
+                return self.render_to_response(context)
+        
         # Save the contact message
         self.object = form.save()
         
@@ -395,6 +426,44 @@ class ContactMessageCreateView(CreateView):
         
         # Show success message
         messages.success(self.request, _("Dziękujemy za wiadomość! Odpowiemy najszybciej jak to możliwe."))
+        
+        return redirect(self.get_success_url())
+
+
+class CaptchaConfigurationView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """View to configure CAPTCHA settings"""
+    model = CaptchaConfiguration
+    form_class = CaptchaConfigurationForm
+    template_name = 'dictionary/captcha_config.html'
+    success_url = reverse_lazy('dictionary:captcha_config')
+    
+    def test_func(self):
+        """Only allow superusers to access this view"""
+        return self.request.user.is_superuser
+    
+    def get_object(self, queryset=None):
+        """Get the CAPTCHA configuration object or create a new one if it doesn't exist"""
+        config = CaptchaConfiguration.objects.first()
+        if not config:
+            # Tworzymy obiekt, ale nie zapisujemy go jeszcze - zostanie zapisany przez formularz
+            config = CaptchaConfiguration(
+                provider='cloudflare',
+                site_key='',
+                secret_key='',
+                is_enabled=True,
+                enable_login=True,
+                enable_contact=True,
+                enable_suggest=True
+            )
+        return config
+    
+    def form_valid(self, form):
+        """Process the form if it's valid"""
+        # Zapisz obiekt
+        self.object = form.save()
+        
+        # Show success message
+        messages.success(self.request, _("Konfiguracja CAPTCHA została zapisana."))
         
         return redirect(self.get_success_url())
 

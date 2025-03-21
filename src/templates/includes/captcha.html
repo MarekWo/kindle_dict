@@ -1,0 +1,20 @@
+{% comment %} kindle_dict\src\templates\includes\captcha.html {% endcomment %}
+{% if captcha_enabled %}
+    {% if captcha_provider == 'cloudflare' %}
+        <div class="mb-3">
+            <div class="cf-turnstile" data-sitekey="{{ captcha_site_key }}" data-theme="light"></div>
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+        </div>
+    {% elif captcha_provider == 'google' %}
+        <div class="mb-3">
+            <div class="g-recaptcha" data-sitekey="{{ captcha_site_key }}" data-size="invisible"></div>
+            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        </div>
+    {% endif %}
+    
+    {% if captcha_error %}
+        <div class="alert alert-danger">
+            {{ captcha_error }}
+        </div>
+    {% endif %}
+{% endif %}

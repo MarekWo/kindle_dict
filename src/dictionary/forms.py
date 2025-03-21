@@ -6,7 +6,7 @@ Forms for the Dictionary app.
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration
 from django.core.validators import FileExtensionValidator
 
 class DictionaryForm(forms.ModelForm):
@@ -157,6 +157,56 @@ class SMTPConfigurationForm(forms.ModelForm):
             # nie wymagaj hasła - zostanie zachowane poprzednie
             if not password and not (instance and instance.pk):
                 self.add_error('password', _('Hasło jest wymagane przy włączonym uwierzytelnianiu.'))
+        
+        return cleaned_data
+
+
+class CaptchaConfigurationForm(forms.ModelForm):
+    """Form for configuring CAPTCHA settings"""
+    
+    secret_key = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True,
+        label=_("Klucz tajny (Secret Key)"),
+        help_text=_("Klucz tajny używany do weryfikacji odpowiedzi CAPTCHA.")
+    )
+    
+    class Meta:
+        model = CaptchaConfiguration
+        fields = [
+            'provider', 'site_key', 'secret_key', 'is_enabled',
+            'enable_login', 'enable_contact', 'enable_suggest'
+        ]
+        widgets = {
+            'provider': forms.RadioSelect(),
+            'site_key': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_login': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_contact': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_suggest': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        help_texts = {
+            'provider': _('Wybierz dostawcę usługi CAPTCHA.'),
+            'site_key': _('Klucz witryny (Site Key) używany do wyświetlania CAPTCHA na stronie.'),
+            'is_enabled': _('Włącz lub wyłącz CAPTCHA globalnie.'),
+            'enable_login': _('Włącz CAPTCHA na stronie logowania.'),
+            'enable_contact': _('Włącz CAPTCHA w formularzu kontaktowym.'),
+            'enable_suggest': _('Włącz CAPTCHA w formularzu propozycji słownika.'),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Sprawdź, czy to jest edycja istniejącej konfiguracji
+        instance = getattr(self, 'instance', None)
+        secret_key = cleaned_data.get('secret_key')
+        
+        # Jeśli to edycja istniejącej konfiguracji i klucz tajny jest pusty,
+        # zachowaj poprzedni klucz
+        if not secret_key and instance and instance.pk:
+            # Pobierz aktualny klucz tajny z bazy danych
+            current_config = CaptchaConfiguration.objects.get(pk=instance.pk)
+            cleaned_data['secret_key'] = current_config.secret_key
         
         return cleaned_data
 

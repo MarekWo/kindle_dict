@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
 {% block title %}Formularz kontaktowy{% endblock %}
 
@@ -69,6 +70,8 @@
                             </div>
                             {% endif %}
                         </div>
+                        
+                        {% include 'includes/captcha.html' %}
                         
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary">Wyślij</button>

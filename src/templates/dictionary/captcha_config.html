@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Konfiguracja CAPTCHA" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1>{% trans "Konfiguracja CAPTCHA" %}</h1>
+            <p class="lead">{% trans "Skonfiguruj ustawienia CAPTCHA do ochrony formularzy przed botami." %}</p>
+            
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">{% trans "Dostawca CAPTCHA" %}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.provider.label }}</label>
+                                    <div class="d-flex">
+                                        {% for radio in form.provider %}
+                                            <div class="form-check me-4">
+                                                {{ radio.tag }}
+                                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                    {{ radio.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if form.provider.help_text %}
+                                        <div class="form-text">{{ form.provider.help_text }}</div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        {% trans "Wybierz dostawcę usługi CAPTCHA. Cloudflare Turnstile i Google reCAPTCHA oferują niewidoczne lub nisko-interakcyjne metody weryfikacji." %}
+                                    </div>
+                                    {% if form.provider.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.provider.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">{% trans "Klucze API" %}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="{{ form.site_key.id_for_label }}" class="form-label">{{ form.site_key.label }}</label>
+                                    {{ form.site_key }}
+                                    {% if form.site_key.help_text %}
+                                        <div class="form-text">{{ form.site_key.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.site_key.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.site_key.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.secret_key.id_for_label }}" class="form-label">{{ form.secret_key.label }}</label>
+                                    {{ form.secret_key }}
+                                    {% if form.secret_key.help_text %}
+                                        <div class="form-text">{{ form.secret_key.help_text }}</div>
+                                    {% endif %}
+                                    <div class="form-text text-info">
+                                        {% trans "Pozostaw puste, aby zachować aktualny klucz tajny. Wypełnij tylko jeśli chcesz zmienić klucz." %}
+                                    </div>
+                                    {% if form.secret_key.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.secret_key.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    <h6>{% trans "Jak uzyskać klucze CAPTCHA?" %}</h6>
+                                    <p class="mb-2">{% trans "Dla Cloudflare Turnstile:" %}</p>
+                                    <ol>
+                                        <li>{% trans "Zaloguj się do panelu Cloudflare" %}</li>
+                                        <li>{% trans "Przejdź do sekcji Turnstile" %}</li>
+                                        <li>{% trans "Utwórz nowy klucz witryny wybierając opcję 'Invisible' lub 'Non-Interactive'" %}</li>
+                                        <li>{% trans "Skopiuj klucz witryny (Site Key) i klucz tajny (Secret Key)" %}</li>
+                                    </ol>
+                                    
+                                    <p class="mb-2">{% trans "Dla Google reCAPTCHA:" %}</p>
+                                    <ol>
+                                        <li>{% trans "Przejdź do strony" %} <a href="https://www.google.com/recaptcha/admin" target="_blank">Google reCAPTCHA Admin</a></li>
+                                        <li>{% trans "Utwórz nowy klucz wybierając reCAPTCHA v3 lub v2 Invisible" %}</li>
+                                        <li>{% trans "Dodaj domenę swojej witryny" %}</li>
+                                        <li>{% trans "Skopiuj klucz witryny (Site Key) i klucz tajny (Secret Key)" %}</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">{% trans "Ustawienia" %}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3 form-check">
+                                    {{ form.is_enabled }}
+                                    <label class="form-check-label" for="{{ form.is_enabled.id_for_label }}">
+                                        {{ form.is_enabled.label }}
+                                    </label>
+                                    {% if form.is_enabled.help_text %}
+                                        <div class="form-text">{{ form.is_enabled.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.is_enabled.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.is_enabled.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3 form-check">
+                                    {{ form.enable_login }}
+                                    <label class="form-check-label" for="{{ form.enable_login.id_for_label }}">
+                                        {{ form.enable_login.label }}
+                                    </label>
+                                    {% if form.enable_login.help_text %}
+                                        <div class="form-text">{{ form.enable_login.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.enable_login.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.enable_login.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3 form-check">
+                                    {{ form.enable_contact }}
+                                    <label class="form-check-label" for="{{ form.enable_contact.id_for_label }}">
+                                        {{ form.enable_contact.label }}
+                                    </label>
+                                    {% if form.enable_contact.help_text %}
+                                        <div class="form-text">{{ form.enable_contact.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.enable_contact.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.enable_contact.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3 form-check">
+                                    {{ form.enable_suggest }}
+                                    <label class="form-check-label" for="{{ form.enable_suggest.id_for_label }}">
+                                        {{ form.enable_suggest.label }}
+                                    </label>
+                                    {% if form.enable_suggest.help_text %}
+                                        <div class="form-text">{{ form.enable_suggest.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.enable_suggest.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.enable_suggest.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">
+                                {% trans "Zapisz konfigurację" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Obsługa zmiany dostawcy CAPTCHA
+        const providerRadios = document.querySelectorAll('input[name="{{ form.provider.html_name }}"]');
+        
+        function updateProviderInfo() {
+            // Znajdź wybrany dostawcę
+            let selectedProvider = '';
+            providerRadios.forEach(radio => {
+                if (radio.checked) {
+                    selectedProvider = radio.value;
+                }
+            });
+            
+            // Tutaj można dodać dodatkową logikę w zależności od wybranego dostawcy
+            // np. pokazać/ukryć specyficzne pola dla danego dostawcy
+        }
+        
+        // Inicjalizacja
+        updateProviderInfo();
+        
+        // Nasłuchiwanie zmian
+        providerRadios.forEach(radio => {
+            radio.addEventListener('change', updateProviderInfo);
+        });
+        
+        // Obsługa globalnego włączania/wyłączania CAPTCHA
+        const isEnabledCheckbox = document.getElementById('{{ form.is_enabled.id_for_label }}');
+        const featureCheckboxes = [
+            document.getElementById('{{ form.enable_login.id_for_label }}'),
+            document.getElementById('{{ form.enable_contact.id_for_label }}'),
+            document.getElementById('{{ form.enable_suggest.id_for_label }}')
+        ];
+        
+        function updateFeatureCheckboxes() {
+            featureCheckboxes.forEach(checkbox => {
+                checkbox.disabled = !isEnabledCheckbox.checked;
+                if (!isEnabledCheckbox.checked) {
+                    checkbox.parentElement.classList.add('text-muted');
+                } else {
+                    checkbox.parentElement.classList.remove('text-muted');
+                }
+            });
+        }
+        
+        // Inicjalizacja
+        updateFeatureCheckboxes();
+        
+        // Nasłuchiwanie zmian
+        isEnabledCheckbox.addEventListener('change', updateFeatureCheckboxes);
+    });
+</script>
+{% endblock %}

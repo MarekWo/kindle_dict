@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% comment %} kindle_dict/src/templates/auth/login.html {% endcomment %}
+{% load i18n %}
 {% block title %}Logowanie - Kreator Słownika Kindle{% endblock %}
 
 {% block content %}
@@ -29,6 +30,8 @@
                             <label for="id_password" class="form-label">Hasło</label>
                             <input type="password" name="password" id="id_password" class="form-control" required>
                         </div>
+                        
+                        {% include 'includes/captcha.html' %}
                         
                         <button type="submit" class="btn btn-primary">Zaloguj się</button>
                         

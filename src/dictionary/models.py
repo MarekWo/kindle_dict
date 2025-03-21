@@ -254,6 +254,72 @@ class SMTPConfiguration(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
+class CaptchaConfiguration(models.Model):
+    """Model to store CAPTCHA configuration"""
+    
+    PROVIDER_CHOICES = (
+        ('cloudflare', _('Cloudflare Turnstile')),
+        ('google', _('Google reCAPTCHA')),
+    )
+    
+    provider = models.CharField(
+        max_length=20,
+        choices=PROVIDER_CHOICES,
+        default='cloudflare',
+        verbose_name=_("Dostawca CAPTCHA")
+    )
+    site_key = models.CharField(
+        max_length=255,
+        verbose_name=_("Klucz witryny (Site Key)")
+    )
+    secret_key = models.CharField(
+        max_length=255,
+        verbose_name=_("Klucz tajny (Secret Key)")
+    )
+    is_enabled = models.BooleanField(
+        default=True,
+        verbose_name=_("Włączone")
+    )
+    enable_login = models.BooleanField(
+        default=True,
+        verbose_name=_("Włącz dla logowania")
+    )
+    enable_contact = models.BooleanField(
+        default=True,
+        verbose_name=_("Włącz dla formularza kontaktowego")
+    )
+    enable_suggest = models.BooleanField(
+        default=True,
+        verbose_name=_("Włącz dla formularza propozycji słownika")
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Utworzono")
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Zaktualizowano")
+    )
+    
+    class Meta:
+        verbose_name = _("Konfiguracja CAPTCHA")
+        verbose_name_plural = _("Konfiguracje CAPTCHA")
+    
+    def __str__(self):
+        return f"{self.get_provider_display()} ({self.site_key})"
+    
+    def clean(self):
+        """Validate that only one configuration exists"""
+        if not self.pk and CaptchaConfiguration.objects.exists():
+            raise ValidationError(_("Może istnieć tylko jedna konfiguracja CAPTCHA."))
+        return super().clean()
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one configuration exists"""
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
 class ContactMessage(models.Model):
     """Model for contact messages from users"""
     
