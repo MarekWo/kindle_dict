@@ -27,6 +27,7 @@ urlpatterns = [
     path('tasks/detail/<uuid:pk>/', views.TaskDetailView.as_view(), name='task_detail'),
     path('tasks/update-status/<uuid:pk>/', views.task_update_status, name='task_update_status'),
     path('tasks/create-dictionary/<uuid:pk>/', views.task_create_dictionary, name='task_create_dictionary'),
+    path('tasks/download-file/<uuid:pk>/', views.task_download_file, name='task_download_file'),
     
     # Configuration
     path('config/smtp/', views.SMTPConfigurationView.as_view(), name='smtp_config'),

@@ -251,6 +251,17 @@ class TaskDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 'notification_email': self.object.email,
                 'content': self.object.content,
             }
+            
+            # Jeśli zadanie ma plik źródłowy, ale nie ma zawartości, wczytaj zawartość pliku
+            if self.object.source_file and not self.object.content:
+                try:
+                    with open(self.object.source_file.path, 'r', encoding='utf-8') as f:
+                        initial_data['content'] = f.read()
+                except Exception as e:
+                    # W przypadku błędu, zaloguj go, ale nie przerywaj działania
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Nie udało się odczytać pliku źródłowego: {e}")
+            
             context['dictionary_form'] = DictionaryForm(initial=initial_data)
         
         return context
@@ -387,6 +398,28 @@ def task_create_dictionary(request, pk):
             })
     
     return redirect('dictionary:task_detail', pk=pk)
+
+def task_download_file(request, pk):
+    """View to download task source file"""
+    # Get the task object
+    task = get_object_or_404(Task, pk=pk)
+    
+    # Check if the task has a source file
+    if not task.source_file or not os.path.exists(task.source_file.path):
+        raise Http404(_("File not found"))
+    
+    # Get the original filename or use a default one
+    filename = os.path.basename(task.source_file.name)
+    
+    # Return the file as a response
+    response = FileResponse(open(task.source_file.path, 'rb'))
+    
+    # Set Content-Disposition header to force download
+    import urllib.parse
+    encoded_filename = urllib.parse.quote(filename)
+    response['Content-Disposition'] = f'attachment; filename="{encoded_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+    
+    return response
 
 def dictionary_download(request, pk, file_type):
     """View to download dictionary files"""
