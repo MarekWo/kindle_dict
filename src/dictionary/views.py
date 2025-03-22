@@ -756,3 +756,23 @@ def test_smtp_email(request):
     
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+class HelpSuggestView(ListView):
+    """View to display help on how to suggest a new dictionary"""
+    model = Dictionary  # Używamy tego modelu, ale nie będziemy wyświetlać jego danych
+    template_name = 'dictionary/help/suggest.html'
+    
+    def get_queryset(self):
+        """Return an empty queryset"""
+        return Dictionary.objects.none()
+
+
+class HelpPromptView(ListView):
+    """View to display example AI prompt"""
+    model = Dictionary  # Używamy tego modelu, ale nie będziemy wyświetlać jego danych
+    template_name = 'dictionary/help/prompt.html'
+    
+    def get_queryset(self):
+        """Return an empty queryset"""
+        return Dictionary.objects.none()

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% comment %} kindle_dict\src\templates\dictionary\help\suggest.html {% endcomment %}
+{% block title %}Jak zaproponować nowy słownik{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Jak zaproponować nowy słownik</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Krok po kroku</h5>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-4">
+                        <li class="mb-3">Kliknij przycisk <strong>"Zaproponuj słownik"</strong> w menu głównym.</li>
+                        <li class="mb-3">Wypełnij formularz propozycji słownika:
+                            <ul class="mt-2">
+                                <li><strong>Nazwa słownika</strong> - podaj tytuł książki, np. "Diuna"</li>
+                                <li><strong>Opis</strong> - krótki opis słownika, np. "Słownik do powieści Franka Herberta 'Diuna' w tłumaczeniu Marka Marszała"</li>
+                                <li><strong>Twoje imię</strong> - podaj swoje imię lub pseudonim</li>
+                                <li><strong>Email</strong> - podaj swój adres email, abyśmy mogli poinformować Cię o statusie Twojej propozycji</li>
+                                <li><strong>Zawartość słownika</strong> - wpisz lub wklej zawartość słownika w odpowiednim formacie (opisanym poniżej)</li>
+                                <li><strong>Plik źródłowy</strong> - alternatywnie możesz załączyć plik tekstowy z zawartością słownika</li>
+                            </ul>
+                        </li>
+                        <li class="mb-3">Rozwiąż CAPTCHA, aby potwierdzić, że nie jesteś robotem.</li>
+                        <li class="mb-3">Kliknij przycisk <strong>"Wyślij propozycję"</strong>.</li>
+                        <li>Otrzymasz potwierdzenie na stronie oraz email z informacją o przyjęciu propozycji do rozpatrzenia.</li>
+                    </ol>
+                    <p>Po wysłaniu propozycji, nasi administratorzy sprawdzą ją i podejmą decyzję o jej zatwierdzeniu lub odrzuceniu. Zostaniesz poinformowany o decyzji drogą mailową.</p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Format pliku słownika</h5>
+                </div>
+                <div class="card-body">
+                    <p>Zawartość słownika musi być zgodna z określonym formatem, aby mogła być prawidłowo przetworzona. Poniżej znajduje się opis formatu oraz przykład:</p>
+                    
+                    <h6 class="mt-4">Podstawowy format:</h6>
+                    <pre class="bg-light p-3 rounded">
+Hasło | {odmiana1, odmiana2, odmiana3} Definicja hasła.
+
+~Grupa_haseł | {odmiana1, odmiana2, odmiana3} Definicja grupy haseł.
+
++Podhasło | {odmiana1, odmiana2, odmiana3} Definicja podhasła.</pre>
+                    
+                    <h6 class="mt-4">Legenda:</h6>
+                    <ul>
+                        <li><code>~</code> (tylda) - oznacza grupę haseł (np. nazwisko rodziny, nazwę organizacji)</li>
+                        <li><code>+</code> (plus) - oznacza hasło należące do poprzedzającej grupy</li>
+                        <li>Hasła bez prefiksu są podstawowymi hasłami słownika</li>
+                        <li>Znak <code>|</code> (pipe) oddziela nazwę hasła od odmian i definicji</li>
+                        <li>Odmiany słów umieszczaj w nawiasach klamrowych <code>{}</code> oddzielone przecinkami</li>
+                        <li>Po nawiasach klamrowych następuje definicja hasła</li>
+                        <li>Pomiędzy hasłami należy zostawić pustą linię dla przejrzystości</li>
+                    </ul>
+                    
+                    <h6 class="mt-4">Przykład rzeczywistego słownika (fragment z "Diuny"):</h6>
+                    <pre class="bg-light p-3 rounded">
+~Atrydzi | {atryda, atrydy, atrydzie, atrydę, atrydą, atrydzi, atrydów, atrydom, atrydami, atrydach} Ród Atrydów, szlachetna i wpływowa rodzina w powieści.
+
++Paul Atryda | {paul, paula, paulowi, paulem, paulu} Główny bohater powieści, syn księcia Leto Atrydy i Lady Jessiki.
+
++Leto Atryda | {leto, leta, letowi, letem, lecie} Ojciec Paula, książę rodu Atrydów.
+
+Fremeni | {fremen, fremena, fremenowi, fremenem, fremenie, fremeni, fremenów, fremenom, fremenami, fremenach} Ludność tubylcza zamieszkująca Arrakis, znana ze swojej odwagi i surowych zasad.
+
+Kwisatz Haderach | {kwisatz, haderach} Legendarny mesjasz w mitologii Bene Gesserit, mający zdolność przewidywania przyszłości.</pre>
+                    
+                    <h6 class="mt-4">Ważne zasady:</h6>
+                    <ul>
+                        <li>Każde hasło powinno być w osobnej linii</li>
+                        <li>Pomiędzy hasłami należy zostawić pustą linię</li>
+                        <li>Odmiany muszą być unikalne w całym słowniku (nie mogą się powtarzać)</li>
+                        <li>Odmiany powinny być pojedynczymi słowami (nie frazami)</li>
+                        <li>Definicje powinny być zwięzłe i nie zawierać znaków nowej linii</li>
+                        <li>Hasła powinny być związane z książką - unikaj haseł ogólnych</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Wskazówki</h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li>Upewnij się, że wszystkie ważne postacie, miejsca i pojęcia z książki są uwzględnione w słowniku.</li>
+                        <li>Pamiętaj o wszystkich możliwych odmianach słów - to pozwoli na lepsze działanie słownika na Kindle.</li>
+                        <li>Definicje powinny być krótkie i treściwe, ale zawierać wszystkie istotne informacje.</li>
+                        <li>Jeśli nie jesteś pewien formatu, możesz skorzystać z przykładowego promptu AI, aby wygenerować słownik w odpowiednim formacie.</li>
+                        <li>Przed wysłaniem propozycji, sprawdź czy w naszej bibliotece nie ma już słownika do tej samej książki.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="text-center mb-4">
+                <a href="{% url 'dictionary:suggest' %}" class="btn btn-primary">Przejdź do formularza propozycji</a>
+                <a href="{% url 'dictionary:help_prompt' %}" class="btn btn-outline-secondary ms-2">Zobacz przykładowy prompt AI</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

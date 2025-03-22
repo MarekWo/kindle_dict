@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% comment %} kindle_dict\src\templates\dictionary\help\prompt.html {% endcomment %}
+{% block title %}Przykładowy prompt AI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Przykładowy prompt AI</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Jak wykorzystać AI do tworzenia słowników</h5>
+                </div>
+                <div class="card-body">
+                    <p>Sztuczna inteligencja może znacznie ułatwić tworzenie słowników do książek. Poniżej znajdziesz przykładowy prompt, który możesz wykorzystać w narzędziach AI, takich jak Claude Sonnet, aby wygenerować słownik w odpowiednim formacie.</p>
+                    <p>Prompt ten został zaprojektowany tak, aby wygenerować słownik zgodny z formatem wymaganym przez naszą platformę. Wystarczy, że skopiujesz go i uzupełnisz odpowiednimi informacjami o książce.</p>
+                    <p class="mb-0"><strong>Wskazówka:</strong> Najlepsze rezultaty uzyskasz korzystając z Claude Sonnet lub podobnych zaawansowanych modeli AI.</p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Przykładowy prompt do skopiowania</h5>
+                </div>
+                <div class="card-body">
+                    <p>Skopiuj poniższy prompt i wklej go do wybranego narzędzia AI. Zastąp fragmenty w nawiasach &lt;...&gt; odpowiednimi informacjami o książce.</p>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="copyPrompt()">Kopiuj prompt</button>
+                    </div>
+                    
+                    <pre id="aiPrompt" class="bg-light p-3 rounded" style="white-space: pre-wrap;">
+Proszę o wygenerowanie możliwie wyczerpującej listy haseł dla książki **"&lt;TYTUŁ KSIĄŻKI&gt;"** autorstwa **&lt;AUTOR&gt;**, w tłumaczeniu na język polski przez **&lt;TŁUMACZ&gt;**.
+
+Lista powinna zawierać:
+
+- **Bohaterów książki** (głównych i drugoplanowych)
+- **Miejsca** występujące w książce
+- **Ważne przedmioty, zwierzęta, zjawiska** i inne istotne elementy fabuły
+
+Proszę zastosować następujący format dla każdego hasła:
+
+- Każde hasło powinno być zapisane w osobnym wierszu.
+- **Format hasła:**
+
+  ```
+  &lt;nazwa hasła&gt; | {&lt;unikalne odmiany przez przypadki wszystkich możliwych części hasła, oddzielone przecinkami&gt;} &lt;Opis hasła&gt;
+  ```
+
+- Pomiędzy hasłami należy zostawić **dodatkowy pusty wiersz** dla przejrzystości.
+- **Hasła grupowe** (np. nazwiska noszone przez wiele postaci, rodziny, frakcje, organizacje):
+
+  - Użyj znaku **tyldy `~`** przed nazwą hasła grupowego.
+  - W nawiasach klamrowych `{}` podaj **unikalne odmiany słów**, zarówno w liczbie pojedynczej, jak i mnogiej.
+  - Hasła podrzędne należące do grupy powinny zaczynać się od znaku **plusa `+`**.
+
+- **Hasła zwykłe** (nie grupowe) nie mają znaku wiodącego.
+- **Odmiany wyrazów** w nawiasach klamrowych `{}`:
+
+  - Muszą być **unikalne dla całej listy haseł** (nie mogą się powtarzać).
+  - Powinny składać się z **pojedynczych słów** (nie fraz), aby umożliwić wyszukiwanie na urządzeniach Kindle, które pozwalają zaznaczać i wyszukiwać tylko pojedyncze słowa.
+
+- **Opisy haseł**:
+
+  - Powinny być **w miarę krótkie**, zapisane w jednym akapicie.
+
+**Przykład:**
+
+```
+~Atrydzi | {atryda, atrydy, atrydzie, atrydę, atrydą, atrydzi, atrydów, atrydom, atrydami, atrydach} Ród Atrydów, szlachetna i wpływowa rodzina w powieści.
+
++Paul Atryda | {paul, paula, paulowi, paulem, paulu} Główny bohater powieści, syn księcia Leto Atrydy i Lady Jessiki.
+
++Leto Atryda | {leto, leta, letowi, letem, lecie} Ojciec Paula, książę rodu Atrydów.
+
+Fremeni | {fremen, fremena, fremenowi, fremenem, fremenie, fremeni, fremenów, fremenom, fremenami, fremenach} Ludność tubylcza zamieszkująca Arrakis, znana ze swojej odwagi i surowych zasad.
+
+Kwisatz Haderach | {kwisatz, haderach} Legendarny mesjasz w mitologii Bene Gesserit, mający zdolność przewidywania przyszłości.
+```
+
+**Proszę zwrócić uwagę na:**
+
+- **Unikalność odmian** w nawiasach klamrowych `{}` dla całej listy haseł.
+- Odmiany powinny być **pojedynczymi słowami**.
+- **Opisy** powinny nie powinny być długie (2-3 zdania dla ważnych postaci i innych elementów z książki, 1-2 zdania dla mniej ważnych postaci) i nie mogą zawierać znaków nowej linii.
+- **Hasła** powinny być specyficznie związane z książką - unikamy haseł uniwersalnych, ogólnych i abstrakcyjnych, takich jak "miłość", "małżeństwo", "Bóg", "ojczyzna" itp., chyba, że są istotne dla fabuły
+- **Liczba haseł** nie powinna przekraczać 50
+
+Proszę o wygenerowanie listy haseł zgodnie z powyższymi wytycznymi, jeśli to możliwe - w postaci załącznika w formacie .txt do pobrania.</pre>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Instrukcja użycia</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li class="mb-2">Skopiuj powyższy prompt.</li>
+                        <li class="mb-2">Wklej go do wybranego narzędzia AI (zalecamy Claude Sonnet).</li>
+                        <li class="mb-2">Zastąp fragmenty w nawiasach &lt;...&gt; odpowiednimi informacjami:
+                            <ul class="mt-1">
+                                <li>&lt;TYTUŁ KSIĄŻKI&gt; - np. "Diuna"</li>
+                                <li>&lt;AUTOR&gt; - np. "Frank Herbert"</li>
+                                <li>&lt;TŁUMACZ&gt; - np. "Marek Marszał"</li>
+                            </ul>
+                        </li>
+                        <li class="mb-2">Wyślij prompt do AI i poczekaj na wygenerowanie słownika.</li>
+                        <li class="mb-2">Sprawdź wygenerowany słownik i w razie potrzeby wprowadź poprawki.</li>
+                        <li>Skopiuj wygenerowany słownik i wklej go do formularza propozycji słownika lub zapisz jako plik tekstowy i załącz go do formularza.</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Wskazówki</h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li>Jeśli wygenerowany słownik jest zbyt krótki, możesz poprosić AI o dodanie większej liczby haseł.</li>
+                        <li>Jeśli wygenerowany słownik zawiera błędy lub nieścisłości, możesz poprosić AI o poprawienie konkretnych haseł.</li>
+                        <li>Możesz również poprosić AI o dodanie konkretnych haseł, które Twoim zdaniem powinny znaleźć się w słowniku.</li>
+                        <li>Pamiętaj, że AI może nie znać wszystkich szczegółów książki, zwłaszcza mniej popularnych tytułów. W takim przypadku możesz potrzebować więcej ręcznej edycji.</li>
+                        <li>Zawsze sprawdź wygenerowany słownik pod kątem poprawności i kompletności przed wysłaniem propozycji.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="text-center mb-4">
+                <a href="{% url 'dictionary:suggest' %}" class="btn btn-primary">Przejdź do formularza propozycji</a>
+                <a href="{% url 'dictionary:help_suggest' %}" class="btn btn-outline-secondary ms-2">Jak zaproponować nowy słownik</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function copyPrompt() {
+    const promptText = document.getElementById('aiPrompt').innerText;
+    navigator.clipboard.writeText(promptText).then(function() {
+        // Tymczasowa informacja o skopiowaniu
+        const button = document.querySelector('button.btn-outline-primary');
+        const originalText = button.innerText;
+        button.innerText = 'Skopiowano!';
+        button.classList.remove('btn-outline-primary');
+        button.classList.add('btn-success');
+        
+        setTimeout(function() {
+            button.innerText = originalText;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-primary');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

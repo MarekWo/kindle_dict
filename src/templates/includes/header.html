@@ -10,9 +10,6 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'home' %}">Strona główna</a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'dictionary:list' %}">Słowniki</a>
                     </li>
                     {% if user.is_authenticated and user.is_superuser or user|has_group:"Dictionary Creator" or user|has_group:"Dictionary Admin" %}
@@ -32,6 +29,15 @@
                     {% if not user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dictionary:suggest' %}">Zaproponuj słownik</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="helpDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Pomoc
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="helpDropdown">
+                            <li><a class="dropdown-item" href="{% url 'dictionary:help_suggest' %}">Jak zaproponować nowy słownik</a></li>
+                            <li><a class="dropdown-item" href="{% url 'dictionary:help_prompt' %}">Przykładowy prompt AI</a></li>
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dictionary:contact' %}">Napisz do nas</a>
