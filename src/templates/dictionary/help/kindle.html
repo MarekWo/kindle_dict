@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% comment %} kindle_dict\src\templates\dictionary\help\kindle.html {% endcomment %}
+{% block title %}Słowniki na Kindle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Słowniki na Kindle</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Czym są słowniki na Kindle?</h5>
+                </div>
+                <div class="card-body">
+                    <p>Słowniki na czytnikach Kindle to specjalne pliki, które umożliwiają szybkie sprawdzanie znaczenia słów podczas czytania. Wystarczy dotknąć słowa na ekranie, aby zobaczyć jego definicję, bez konieczności przerywania lektury i sięgania po zewnętrzne źródła.</p>
+                    
+                    <p>Słowniki są szczególnie przydatne podczas czytania:</p>
+                    <ul>
+                        <li>Książek w języku obcym (słowniki tłumaczeniowe)</li>
+                        <li>Literatury fantasy i science fiction (słowniki terminów specyficznych dla danego uniwersum)</li>
+                        <li>Książek historycznych (słowniki postaci i miejsc)</li>
+                        <li>Literatury klasycznej (słowniki archaizmów i rzadko używanych terminów)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Jak działają słowniki na Kindle?</h5>
+                </div>
+                <div class="card-body">
+                    <p>Słowniki na Kindle działają na zasadzie indeksowania słów i ich odmian, co pozwala na szybkie wyszukiwanie definicji. Gdy dotykasz słowa na ekranie czytnika, Kindle:</p>
+                    
+                    <ol>
+                        <li>Identyfikuje zaznaczone słowo</li>
+                        <li>Przeszukuje zainstalowane słowniki w poszukiwaniu tego słowa lub jego odmiany</li>
+                        <li>Wyświetla definicję w małym oknie nad tekstem</li>
+                    </ol>
+                    
+                    <p>Kindle automatycznie wybiera słownik odpowiedni dla języka książki, którą czytasz. Możesz również ręcznie wybrać, którego słownika chcesz użyć.</p>
+                    
+                    <h6 class="mt-4">Format słowników</h6>
+                    <p>Słowniki na Kindle są zapisywane w specjalnym formacie MOBI z dodatkowymi metadanymi, które informują czytnik, że plik jest słownikiem, a nie zwykłą książką. Nasza platforma automatycznie generuje pliki w odpowiednim formacie na podstawie dostarczonych przez użytkowników danych źródłowych.</p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Jak zainstalować słownik na Kindle?</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Pobierz plik słownika w formacie MOBI z naszej biblioteki</li>
+                        <li>Podłącz czytnik Kindle do komputera za pomocą kabla USB</li>
+                        <li>Skopiuj plik słownika do folderu "documents" na czytniku</li>
+                        <li>Bezpiecznie odłącz czytnik od komputera</li>
+                        <li>Słownik zostanie automatycznie rozpoznany przez czytnik i będzie dostępny do użycia</li>
+                    </ol>
+                    
+                    <p>Alternatywnie, możesz wysłać plik słownika na swój adres e-mail Kindle, jeśli masz skonfigurowaną taką opcję.</p>
+                    
+                    <h6 class="mt-4">Wybór słownika podczas czytania</h6>
+                    <p>Aby wybrać słownik podczas czytania:</p>
+                    <ol>
+                        <li>Dotknij i przytrzymaj słowo na ekranie</li>
+                        <li>W wyświetlonym oknie definicji, dotknij nazwy aktualnie używanego słownika</li>
+                        <li>Wybierz słownik z listy dostępnych słowników</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Więcej informacji</h5>
+                </div>
+                <div class="card-body">
+                    <p>Aby dowiedzieć się więcej o słownikach na Kindle, odwiedź stronę "Pytania i odpowiedzi" na popularnym serwisie Świat Czytników:</p>
+                    
+                    <div class="text-center my-4">
+                        <a href="https://swiatczytnikow.pl/slowniki-na-kindle-pytania-i-odpowiedzi/" class="btn btn-primary" target="_blank">Słowniki na Kindle - Pytania i odpowiedzi</a>
+                    </div>
+                    
+                    <p>Znajdziesz tam szczegółowe informacje na temat:</p>
+                    <ul>
+                        <li>Różnych typów słowników dostępnych dla Kindle</li>
+                        <li>Zaawansowanych funkcji słowników</li>
+                        <li>Rozwiązywania problemów ze słownikami</li>
+                        <li>Tworzenia własnych słowników</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="text-center mb-4">
+                <a href="{% url 'dictionary:list' %}" class="btn btn-primary">Przeglądaj dostępne słowniki</a>
+                <a href="{% url 'dictionary:help_suggest' %}" class="btn btn-outline-secondary ms-2">Jak zaproponować nowy słownik</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

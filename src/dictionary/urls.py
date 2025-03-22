@@ -40,4 +40,5 @@ urlpatterns = [
     # Help pages
     path('help/suggest/', views.HelpSuggestView.as_view(), name='help_suggest'),
     path('help/prompt/', views.HelpPromptView.as_view(), name='help_prompt'),
+    path('help/kindle/', views.HelpKindleView.as_view(), name='help_kindle'),
 ]

@@ -776,3 +776,13 @@ class HelpPromptView(ListView):
     def get_queryset(self):
         """Return an empty queryset"""
         return Dictionary.objects.none()
+
+
+class HelpKindleView(ListView):
+    """View to display information about dictionaries on Kindle"""
+    model = Dictionary  # Używamy tego modelu, ale nie będziemy wyświetlać jego danych
+    template_name = 'dictionary/help/kindle.html'
+    
+    def get_queryset(self):
+        """Return an empty queryset"""
+        return Dictionary.objects.none()
