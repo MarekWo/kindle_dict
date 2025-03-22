@@ -7,7 +7,7 @@ Admin configuration for the Dictionary app.
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task
 
 @admin.register(Dictionary)
 class DictionaryAdmin(admin.ModelAdmin):
@@ -43,13 +43,64 @@ class DictionaryAdmin(admin.ModelAdmin):
     
     rebuild_dictionaries.short_description = _("Rebuild selected dictionaries")
 
+@admin.register(Task)
+class TaskAdmin(admin.ModelAdmin):
+    """Admin for Task model"""
+    list_display = ('title', 'task_type', 'status', 'email', 'created_at', 'assigned_to')
+    list_filter = ('status', 'task_type')
+    search_fields = ('title', 'description', 'email')
+    readonly_fields = ('id', 'created_at', 'updated_at', 'completed_at')
+    fieldsets = (
+        (None, {
+            'fields': ('id', 'title', 'description', 'task_type', 'status')
+        }),
+        (_('Przypisanie'), {
+            'fields': ('created_by', 'assigned_to', 'related_dictionary')
+        }),
+        (_('Dane kontaktowe'), {
+            'fields': ('email',)
+        }),
+        (_('Zawartość'), {
+            'fields': ('content', 'source_file')
+        }),
+        (_('Daty'), {
+            'fields': ('created_at', 'updated_at', 'completed_at')
+        }),
+    )
+    actions = ['mark_as_accepted', 'mark_as_rejected', 'mark_as_completed']
+    
+    def mark_as_accepted(self, request, queryset):
+        """Admin action to mark selected tasks as accepted"""
+        for task in queryset:
+            task.mark_as_accepted(request.user)
+        self.message_user(request, _("Wybrane zadania zostały oznaczone jako zaakceptowane."))
+    
+    mark_as_accepted.short_description = _("Oznacz jako zaakceptowane")
+    
+    def mark_as_rejected(self, request, queryset):
+        """Admin action to mark selected tasks as rejected"""
+        for task in queryset:
+            task.mark_as_rejected()
+        self.message_user(request, _("Wybrane zadania zostały oznaczone jako odrzucone."))
+    
+    mark_as_rejected.short_description = _("Oznacz jako odrzucone")
+    
+    def mark_as_completed(self, request, queryset):
+        """Admin action to mark selected tasks as completed"""
+        for task in queryset:
+            task.mark_as_completed()
+        self.message_user(request, _("Wybrane zadania zostały oznaczone jako zrealizowane."))
+    
+    mark_as_completed.short_description = _("Oznacz jako zrealizowane")
+
+
 @admin.register(DictionarySuggestion)
 class DictionarySuggestionAdmin(admin.ModelAdmin):
     """Admin for DictionarySuggestion model"""
-    list_display = ('name', 'email', 'status', 'created_at')
+    list_display = ('name', 'email', 'status', 'created_at', 'has_task')
     list_filter = ('status',)
     search_fields = ('name', 'description', 'email')
-    readonly_fields = ('id', 'created_at')
+    readonly_fields = ('id', 'created_at', 'task')
     fieldsets = (
         (None, {
             'fields': ('id', 'name', 'description', 'email')
@@ -60,8 +111,17 @@ class DictionarySuggestionAdmin(admin.ModelAdmin):
         (_('Status & Date'), {
             'fields': ('status', 'created_at')
         }),
+        (_('Zadanie'), {
+            'fields': ('task',)
+        }),
     )
-    actions = ['approve_suggestions', 'reject_suggestions']
+    actions = ['approve_suggestions', 'reject_suggestions', 'create_tasks']
+    
+    def has_task(self, obj):
+        """Check if suggestion has a task"""
+        return bool(obj.task)
+    has_task.boolean = True
+    has_task.short_description = _("Ma zadanie")
     
     def approve_suggestions(self, request, queryset):
         """Admin action to approve selected suggestions"""
@@ -77,6 +137,21 @@ class DictionarySuggestionAdmin(admin.ModelAdmin):
         self.message_user(request, _("Selected suggestions have been rejected."))
     
     reject_suggestions.short_description = _("Reject selected suggestions")
+    
+    def create_tasks(self, request, queryset):
+        """Admin action to create tasks from selected suggestions"""
+        task_count = 0
+        for suggestion in queryset:
+            if not suggestion.task:
+                suggestion.create_task()
+                task_count += 1
+        
+        if task_count:
+            self.message_user(request, _("Utworzono {0} nowych zadań.").format(task_count))
+        else:
+            self.message_user(request, _("Nie utworzono żadnych nowych zadań. Wszystkie wybrane sugestie mają już zadania."))
+    
+    create_tasks.short_description = _("Utwórz zadania z wybranych sugestii")
 
 @admin.register(SMTPConfiguration)
 class SMTPConfigurationAdmin(admin.ModelAdmin):

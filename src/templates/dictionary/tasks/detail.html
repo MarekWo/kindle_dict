@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load dictionary_extras %}
+
+{% block title %}Szczegóły zadania{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Szczegóły zadania</h1>
+                <div>
+                    <a href="{% url 'dictionary:tasks' %}" class="btn btn-outline-secondary">Powrót do listy</a>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ task.title }}</h5>
+                        <div>
+                            {% if task.status == 'new' %}
+                                <span class="badge bg-danger">{{ task.get_status_display }}</span>
+                            {% elif task.status == 'accepted' %}
+                                <span class="badge bg-primary">{{ task.get_status_display }}</span>
+                            {% elif task.status == 'rejected' %}
+                                <span class="badge bg-warning">{{ task.get_status_display }}</span>
+                            {% elif task.status == 'completed' %}
+                                <span class="badge bg-success">{{ task.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Typ zadania:</div>
+                        <div class="col-md-9">{{ task.get_task_type_display }}</div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Data utworzenia:</div>
+                        <div class="col-md-9">{{ task.created_at|date:"d.m.Y H:i" }}</div>
+                    </div>
+                    
+                    {% if task.assigned_to %}
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Przypisane do:</div>
+                        <div class="col-md-9">{{ task.assigned_to.username }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if task.email %}
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Email zgłaszającego:</div>
+                        <div class="col-md-9">{{ task.email }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if task.description %}
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Opis:</div>
+                        <div class="col-md-9">{{ task.description|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if task.task_type == 'dictionary_suggestion' %}
+                        {% if task.content %}
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Zawartość słownika:</div>
+                            <div class="col-md-9">
+                                <pre class="border p-3 bg-light" style="max-height: 300px; overflow-y: auto;">{{ task.content }}</pre>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if task.source_file %}
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Plik źródłowy:</div>
+                            <div class="col-md-9">
+                                <a href="{{ task.source_file.url }}" class="btn btn-sm btn-outline-primary">Pobierz plik</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if task.related_dictionary %}
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Powiązany słownik:</div>
+                        <div class="col-md-9">
+                            <a href="{% url 'dictionary:detail' pk=task.related_dictionary.pk %}">{{ task.related_dictionary.name }}</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Aktualizacja statusu</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'dictionary:task_update_status' pk=task.pk %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ status_form.status.id_for_label }}" class="col-sm-3 col-form-label">{{ status_form.status.label }}</label>
+                            <div class="col-sm-9">
+                                {{ status_form.status }}
+                                {% if status_form.status.errors %}
+                                    <div class="invalid-feedback d-block">{{ status_form.status.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ status_form.assigned_to.id_for_label }}" class="col-sm-3 col-form-label">{{ status_form.assigned_to.label }}</label>
+                            <div class="col-sm-9">
+                                {{ status_form.assigned_to }}
+                                {% if status_form.assigned_to.errors %}
+                                    <div class="invalid-feedback d-block">{{ status_form.assigned_to.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row rejection-reason-field" style="display: none;">
+                            <label for="{{ status_form.rejection_reason.id_for_label }}" class="col-sm-3 col-form-label">{{ status_form.rejection_reason.label }}</label>
+                            <div class="col-sm-9">
+                                {{ status_form.rejection_reason }}
+                                {% if status_form.rejection_reason.errors %}
+                                    <div class="invalid-feedback d-block">{{ status_form.rejection_reason.errors }}</div>
+                                {% endif %}
+                                {% if status_form.rejection_reason.help_text %}
+                                    <div class="form-text">{{ status_form.rejection_reason.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-sm-9 offset-sm-3">
+                                <button type="submit" class="btn btn-primary">Aktualizuj status</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if task.task_type == 'dictionary_suggestion' and task.status == 'accepted' %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Utwórz słownik z tego zadania</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'dictionary:task_create_dictionary' pk=task.pk %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ dictionary_form.name.id_for_label }}" class="col-sm-3 col-form-label">{{ dictionary_form.name.label }}</label>
+                            <div class="col-sm-9">
+                                {{ dictionary_form.name }}
+                                {% if dictionary_form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ dictionary_form.name.errors }}</div>
+                                {% endif %}
+                                {% if dictionary_form.name.help_text %}
+                                    <div class="form-text">{{ dictionary_form.name.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ dictionary_form.description.id_for_label }}" class="col-sm-3 col-form-label">{{ dictionary_form.description.label }}</label>
+                            <div class="col-sm-9">
+                                {{ dictionary_form.description }}
+                                {% if dictionary_form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ dictionary_form.description.errors }}</div>
+                                {% endif %}
+                                {% if dictionary_form.description.help_text %}
+                                    <div class="form-text">{{ dictionary_form.description.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ dictionary_form.creator_name.id_for_label }}" class="col-sm-3 col-form-label">{{ dictionary_form.creator_name.label }}</label>
+                            <div class="col-sm-9">
+                                {{ dictionary_form.creator_name }}
+                                {% if dictionary_form.creator_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ dictionary_form.creator_name.errors }}</div>
+                                {% endif %}
+                                {% if dictionary_form.creator_name.help_text %}
+                                    <div class="form-text">{{ dictionary_form.creator_name.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ dictionary_form.notification_email.id_for_label }}" class="col-sm-3 col-form-label">{{ dictionary_form.notification_email.label }}</label>
+                            <div class="col-sm-9">
+                                {{ dictionary_form.notification_email }}
+                                {% if dictionary_form.notification_email.errors %}
+                                    <div class="invalid-feedback d-block">{{ dictionary_form.notification_email.errors }}</div>
+                                {% endif %}
+                                {% if dictionary_form.notification_email.help_text %}
+                                    <div class="form-text">{{ dictionary_form.notification_email.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ dictionary_form.language_code.id_for_label }}" class="col-sm-3 col-form-label">{{ dictionary_form.language_code.label }}</label>
+                            <div class="col-sm-9">
+                                {{ dictionary_form.language_code }}
+                                {% if dictionary_form.language_code.errors %}
+                                    <div class="invalid-feedback d-block">{{ dictionary_form.language_code.errors }}</div>
+                                {% endif %}
+                                {% if dictionary_form.language_code.help_text %}
+                                    <div class="form-text">{{ dictionary_form.language_code.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <div class="col-sm-9 offset-sm-3">
+                                <div class="form-check">
+                                    {{ dictionary_form.is_public }}
+                                    <label class="form-check-label" for="{{ dictionary_form.is_public.id_for_label }}">
+                                        {{ dictionary_form.is_public.label }}
+                                    </label>
+                                    {% if dictionary_form.is_public.help_text %}
+                                        <div class="form-text">{{ dictionary_form.is_public.help_text }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ dictionary_form.content.id_for_label }}" class="col-sm-3 col-form-label">{{ dictionary_form.content.label }}</label>
+                            <div class="col-sm-9">
+                                {{ dictionary_form.content }}
+                                {% if dictionary_form.content.errors %}
+                                    <div class="invalid-feedback d-block">{{ dictionary_form.content.errors }}</div>
+                                {% endif %}
+                                {% if dictionary_form.content.help_text %}
+                                    <div class="form-text">{{ dictionary_form.content.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="{{ dictionary_form.source_file.id_for_label }}" class="col-sm-3 col-form-label">{{ dictionary_form.source_file.label }}</label>
+                            <div class="col-sm-9">
+                                {{ dictionary_form.source_file }}
+                                {% if dictionary_form.source_file.errors %}
+                                    <div class="invalid-feedback d-block">{{ dictionary_form.source_file.errors }}</div>
+                                {% endif %}
+                                {% if dictionary_form.source_file.help_text %}
+                                    <div class="form-text">{{ dictionary_form.source_file.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if dictionary_form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in dictionary_form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-sm-9 offset-sm-3">
+                                <button type="submit" class="btn btn-success">Utwórz słownik</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusSelect = document.getElementById('{{ status_form.status.id_for_label }}');
+        const rejectionReasonField = document.querySelector('.rejection-reason-field');
+        
+        // Funkcja do pokazywania/ukrywania pola powodu odrzucenia
+        function toggleRejectionReason() {
+            if (statusSelect.value === 'rejected') {
+                rejectionReasonField.style.display = 'flex';
+            } else {
+                rejectionReasonField.style.display = 'none';
+            }
+        }
+        
+        // Wywołaj funkcję przy załadowaniu strony
+        toggleRejectionReason();
+        
+        // Dodaj nasłuchiwanie na zmianę statusu
+        statusSelect.addEventListener('change', toggleRejectionReason);
+    });
+</script>
+{% endblock %}

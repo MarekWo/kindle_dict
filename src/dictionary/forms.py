@@ -6,7 +6,7 @@ Forms for the Dictionary app.
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task
 from django.core.validators import FileExtensionValidator
 
 class DictionaryForm(forms.ModelForm):
@@ -270,6 +270,66 @@ class DictionaryUpdateForm(forms.ModelForm):
         return cleaned_data
 
 
+class TaskForm(forms.ModelForm):
+    """Form for creating or updating a task"""
+    
+    class Meta:
+        model = Task
+        fields = ['title', 'description', 'task_type', 'status', 'email', 'content', 'source_file', 'assigned_to']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+            'task_type': forms.Select(attrs={'class': 'form-select'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
+            'source_file': forms.FileInput(attrs={'class': 'form-control'}),
+            'assigned_to': forms.Select(attrs={'class': 'form-select'}),
+        }
+        labels = {
+            'title': _('Tytuł'),
+            'description': _('Opis'),
+            'task_type': _('Typ zadania'),
+            'status': _('Status'),
+            'email': _('Email zgłaszającego'),
+            'content': _('Zawartość'),
+            'source_file': _('Plik źródłowy'),
+            'assigned_to': _('Przypisane do'),
+        }
+
+
+class TaskStatusForm(forms.ModelForm):
+    """Form for updating task status"""
+    
+    class Meta:
+        model = Task
+        fields = ['status', 'assigned_to', 'rejection_reason']
+        widgets = {
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'assigned_to': forms.Select(attrs={'class': 'form-select'}),
+            'rejection_reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+        labels = {
+            'status': _('Status'),
+            'assigned_to': _('Przypisane do'),
+            'rejection_reason': _('Powód odrzucenia'),
+        }
+        help_texts = {
+            'rejection_reason': _('Wymagane przy odrzuceniu zadania. Powód zostanie wysłany do zgłaszającego.'),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        status = cleaned_data.get('status')
+        rejection_reason = cleaned_data.get('rejection_reason')
+        
+        # Jeśli status to "odrzucone", powód odrzucenia jest wymagany
+        if status == 'rejected' and not rejection_reason:
+            self.add_error('rejection_reason', _('Powód odrzucenia jest wymagany przy odrzucaniu zadania.'))
+        
+        return cleaned_data
+
+
 class DictionarySuggestionForm(forms.ModelForm):
     """Form for submitting a dictionary suggestion"""
     
@@ -290,16 +350,21 @@ class DictionarySuggestionForm(forms.ModelForm):
     
     class Meta:
         model = DictionarySuggestion
-        fields = ['name', 'description', 'email', 'content', 'source_file']
+        fields = ['name', 'description', 'author_name', 'email', 'content', 'source_file']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+            'author_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
         }
         labels = {
             'name': _('Nazwa'),
             'description': _('Opis'),
+            'author_name': _('Autor słownika'),
             'email': _('Adres e-mail'),
+        }
+        help_texts = {
+            'author_name': _('Opcjonalne pole. Jeśli nie zostanie wypełnione, autor zostanie oznaczony jako "Nieznany".'),
         }
     
     def clean(self):

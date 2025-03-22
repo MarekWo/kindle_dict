@@ -104,6 +104,7 @@ def verify_cloudflare_turnstile(token, secret_key):
         )
         
         result = response.json()
+        # Nie logujemy tutaj, ponieważ logowanie jest już obsługiwane przez Django
         return result.get('success', False)
     except Exception as e:
         print(f"Error verifying Cloudflare Turnstile: {e}")

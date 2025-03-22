@@ -6,22 +6,30 @@ Views for the Dictionary app.
 
 import os
 import json
+import logging
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
 from django.views.generic.edit import UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib import messages
 from django.http import FileResponse, Http404, JsonResponse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
+from django.db.models import Count, Q
 
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration
-from .forms import DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm, ContactMessageForm, CaptchaConfigurationForm
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task
+from .forms import (
+    DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm, 
+    ContactMessageForm, CaptchaConfigurationForm, TaskForm, TaskStatusForm
+)
 from .tasks import process_dictionary
-from .email_utils import send_test_email, send_contact_message_notification
+from .email_utils import (
+    send_test_email, send_contact_message_notification, send_task_notification,
+    send_task_status_notification_to_submitter
+)
 from .captcha_utils import verify_captcha_response, get_captcha_context, is_captcha_enabled
 
 class DictionaryListView(ListView):
@@ -112,6 +120,17 @@ class DictionaryCreateView(LoginRequiredMixin, CreateView):
         
         return redirect(self.get_success_url())
 
+# Funkcja pomocnicza do sprawdzania uprawnień
+def can_manage_tasks(user):
+    """Check if user can manage tasks"""
+    return (user.is_authenticated and 
+            (user.is_superuser or 
+             user.groups.filter(name__in=['Dictionary Admin', 'Dictionary Creator']).exists()))
+
+def get_new_tasks_count():
+    """Get count of new tasks"""
+    return Task.objects.filter(status='new').count()
+
 class DictionarySuggestionCreateView(CreateView):
     """View for anonymous users to submit dictionary suggestions"""
     model = DictionarySuggestion
@@ -156,10 +175,218 @@ class DictionarySuggestionCreateView(CreateView):
         self.object.status = 'pending'
         self.object.save()
         
+        # Create a task for this suggestion
+        # Nie tworzymy zadania tutaj, ponieważ jest już tworzone w sygnale post_save
+        
+        # Send notification about new task
+        send_task_notification(self.object.task)
+        
         # Show success message
-        messages.success(self.request, _("Thank you for your suggestion! It will be reviewed by our administrators."))
+        messages.success(self.request, _("Dziękujemy za Twoją propozycję! Zostanie ona sprawdzona przez naszych administratorów."))
         
         return redirect(self.get_success_url())
+
+class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """View to display a list of tasks"""
+    model = Task
+    template_name = 'dictionary/tasks/list.html'
+    context_object_name = 'tasks'
+    login_url = reverse_lazy('login')
+    
+    def test_func(self):
+        """Check if user can manage tasks"""
+        return can_manage_tasks(self.request.user)
+    
+    def get_queryset(self):
+        """Filter tasks based on tab"""
+        tab = self.kwargs.get('tab', 'new')
+        
+        if tab == 'new':
+            return Task.objects.filter(status='new').order_by('-created_at')
+        elif tab == 'pending':
+            return Task.objects.filter(status='accepted').order_by('-updated_at')
+        elif tab == 'archive':
+            return Task.objects.filter(status__in=['completed', 'rejected']).order_by('-updated_at')
+        else:
+            return Task.objects.all().order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        """Add additional data to context"""
+        context = super().get_context_data(**kwargs)
+        tab = self.kwargs.get('tab', 'new')
+        context['active_tab'] = tab
+        
+        # Add counts for each tab
+        context['new_count'] = Task.objects.filter(status='new').count()
+        context['pending_count'] = Task.objects.filter(status='accepted').count()
+        context['archive_count'] = Task.objects.filter(status__in=['completed', 'rejected']).count()
+        
+        return context
+
+class TaskDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    """View to display details of a task"""
+    model = Task
+    template_name = 'dictionary/tasks/detail.html'
+    context_object_name = 'task'
+    login_url = reverse_lazy('login')
+    
+    def test_func(self):
+        """Check if user can manage tasks"""
+        return can_manage_tasks(self.request.user)
+    
+    def get_context_data(self, **kwargs):
+        """Add additional data to context"""
+        context = super().get_context_data(**kwargs)
+        context['status_form'] = TaskStatusForm(instance=self.object)
+        
+        # Add dictionary creation form if task is a dictionary suggestion
+        if self.object.task_type == 'dictionary_suggestion' and self.object.status == 'accepted':
+            # Ustaw domyślną wartość dla creator_name
+            creator_name = self.object.author_name if self.object.author_name else "Nieznany"
+            
+            initial_data = {
+                'name': self.object.title.replace('Sugestia słownika: ', ''),
+                'description': self.object.description,
+                'creator_name': creator_name,
+                'notification_email': self.object.email,
+                'content': self.object.content,
+            }
+            context['dictionary_form'] = DictionaryForm(initial=initial_data)
+        
+        return context
+
+@login_required
+@user_passes_test(can_manage_tasks)
+def task_update_status(request, pk):
+    """View to update task status"""
+    task = get_object_or_404(Task, pk=pk)
+    
+    if request.method == 'POST':
+        form = TaskStatusForm(request.POST, instance=task)
+        if form.is_valid():
+            old_status = task.status
+            task = form.save()
+            
+            # Logowanie dla debugowania
+            logger = logging.getLogger(__name__)
+            logger.info(f"Task status update: old_status={old_status}, new_status={task.status}")
+            
+            # Zawsze wysyłaj powiadomienie do zgłaszającego, niezależnie od zmiany statusu
+            # Send notification to administrators
+            send_task_notification(task, status_change=True)
+            
+            # Send notification to submitter if email is provided
+            if task.email:
+                logger.info(f"Sending notification to submitter: {task.email}")
+                send_task_status_notification_to_submitter(task)
+            
+            messages.success(request, _("Status zadania został zaktualizowany."))
+            
+            # Redirect to appropriate tab based on new status
+            if task.status == 'new':
+                return redirect('dictionary:tasks', tab='new')
+            elif task.status == 'accepted':
+                return redirect('dictionary:tasks', tab='pending')
+            elif task.status in ['completed', 'rejected']:
+                return redirect('dictionary:tasks', tab='archive')
+        else:
+            messages.error(request, _("Wystąpił błąd podczas aktualizacji statusu zadania."))
+    
+    return redirect('dictionary:task_detail', pk=pk)
+
+@login_required
+@user_passes_test(can_manage_tasks)
+def task_create_dictionary(request, pk):
+    """View to create a dictionary from a task"""
+    task = get_object_or_404(Task, pk=pk)
+    
+    if task.task_type != 'dictionary_suggestion' or task.status != 'accepted':
+        messages.error(request, _("Nie można utworzyć słownika z tego zadania."))
+        return redirect('dictionary:task_detail', pk=pk)
+    
+    if request.method == 'POST':
+        form = DictionaryForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Save the dictionary
+            dictionary = form.save(commit=False)
+            
+            # Set creator name to current user if not provided
+            if not dictionary.creator_name and request.user.is_authenticated:
+                user = request.user
+                full_name = f"{user.first_name} {user.last_name}".strip()
+                if full_name:
+                    dictionary.creator_name = full_name
+                else:
+                    dictionary.creator_name = user.username
+            
+            # Handle content from textarea if provided
+            content = form.cleaned_data.get('content')
+            if content and not dictionary.source_file:
+                # Create a temporary file and save the content to it
+                import tempfile
+                
+                # Create a temporary file with the content
+                content_file = tempfile.NamedTemporaryFile(delete=False, suffix='.txt')
+                content_file.write(content.encode('utf-8'))
+                content_file.close()
+                
+                # Set the source_file field to this file
+                from django.core.files import File
+                with open(content_file.name, 'rb') as f:
+                    filename = f"{dictionary.name}.txt"
+                    dictionary.source_file.save(filename, File(f), save=False)
+                
+                # Clean up the temporary file
+                os.unlink(content_file.name)
+            # Jeśli nie podano zawartości ani pliku, ale zadanie ma zawartość lub plik
+            elif not content and not dictionary.source_file:
+                if task.content:
+                    # Utwórz plik z zawartością zadania
+                    import tempfile
+                    
+                    content_file = tempfile.NamedTemporaryFile(delete=False, suffix='.txt')
+                    content_file.write(task.content.encode('utf-8'))
+                    content_file.close()
+                    
+                    from django.core.files import File
+                    with open(content_file.name, 'rb') as f:
+                        filename = f"{dictionary.name}.txt"
+                        dictionary.source_file.save(filename, File(f), save=False)
+                    
+                    os.unlink(content_file.name)
+                elif task.source_file:
+                    # Kopiuj plik z zadania
+                    from django.core.files.base import ContentFile
+                    dictionary.source_file.save(
+                        task.source_file.name,
+                        ContentFile(task.source_file.read()),
+                        save=False
+                    )
+            
+            # Set status and save the object
+            dictionary.status = 'pending'
+            dictionary.save()
+            
+            # Start the Celery task for processing the dictionary
+            process_dictionary.delay(str(dictionary.id))
+            
+            # Update task status and link to dictionary
+            task.mark_as_completed(dictionary)
+            
+            # Send notification to submitter
+            send_task_status_notification_to_submitter(task)
+            
+            messages.success(request, _("Słownik został utworzony i jest przetwarzany."))
+            return redirect('dictionary:tasks', tab='archive')
+        else:
+            messages.error(request, _("Wystąpił błąd podczas tworzenia słownika."))
+            return render(request, 'dictionary/tasks/detail.html', {
+                'task': task,
+                'status_form': TaskStatusForm(instance=task),
+                'dictionary_form': form
+            })
+    
+    return redirect('dictionary:task_detail', pk=pk)
 
 def dictionary_download(request, pk, file_type):
     """View to download dictionary files"""

@@ -8,6 +8,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
 from .models import SMTPConfiguration
 
 logger = logging.getLogger(__name__)
@@ -89,6 +91,7 @@ def send_email(to_email, subject, html_content, text_content=None, smtp_config=N
         server.send_message(msg)
         server.quit()
         
+        # Logujemy wysłanie e-maila
         logger.info(f"Email sent to {to_email}: {subject}")
         return True
     
@@ -240,6 +243,61 @@ def send_test_email(to_email, smtp_config=None):
     
     return send_email(to_email, subject, html_content, smtp_config=smtp_config)
 
+def get_admin_users():
+    """
+    Get all users who are administrators (superusers or in Dictionary Admin group).
+    
+    Returns:
+        list: List of User objects
+    """
+    User = get_user_model()
+    
+    # Get all superusers
+    superusers = User.objects.filter(is_superuser=True)
+    
+    # Get all users in Dictionary Admin group
+    try:
+        admin_group = Group.objects.get(name='Dictionary Admin')
+        admin_users = admin_group.user_set.all()
+    except Group.DoesNotExist:
+        admin_users = User.objects.none()
+    
+    # Combine and remove duplicates
+    admin_users = (superusers | admin_users).distinct()
+    
+    return admin_users
+
+def get_dictionary_creator_users():
+    """
+    Get all users who can create dictionaries (superusers, Dictionary Admin, or Dictionary Creator).
+    
+    Returns:
+        list: List of User objects
+    """
+    User = get_user_model()
+    
+    # Get all superusers
+    superusers = User.objects.filter(is_superuser=True)
+    
+    # Get all users in Dictionary Admin group
+    try:
+        admin_group = Group.objects.get(name='Dictionary Admin')
+        admin_users = admin_group.user_set.all()
+    except Group.DoesNotExist:
+        admin_users = User.objects.none()
+    
+    # Get all users in Dictionary Creator group
+    try:
+        creator_group = Group.objects.get(name='Dictionary Creator')
+        creator_users = creator_group.user_set.all()
+    except Group.DoesNotExist:
+        creator_users = User.objects.none()
+    
+    # Combine and remove duplicates
+    all_users = (superusers | admin_users | creator_users).distinct()
+    
+    return all_users
+
 def send_contact_message_notification(contact_message):
     """
     Send a notification to administrators about a new contact message.
@@ -250,14 +308,11 @@ def send_contact_message_notification(contact_message):
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
-    from django.contrib.auth import get_user_model
+    # Get all admin users
+    admin_users = get_admin_users()
     
-    # Get all superusers
-    User = get_user_model()
-    superusers = User.objects.filter(is_superuser=True)
-    
-    if not superusers:
-        logger.warning("No superusers found to notify about contact message")
+    if not admin_users:
+        logger.warning("No admin users found to notify about contact message")
         return False
     
     # Prepare email content
@@ -302,9 +357,9 @@ def send_contact_message_notification(contact_message):
         else:
             headers['Reply-To'] = contact_message.email
     
-    # Send to all superusers
+    # Send to all admin users
     success = True
-    for user in superusers:
+    for user in admin_users:
         if user.email:
             result = send_email(user.email, subject, html_content, headers=headers)
             if not result:
@@ -312,3 +367,162 @@ def send_contact_message_notification(contact_message):
                 success = False
     
     return success
+
+def send_task_notification(task, status_change=False):
+    """
+    Send a notification to administrators about a new task or task status change.
+    
+    Args:
+        task: Task object that was created or updated
+        status_change: Whether this is a notification about a status change
+        
+    Returns:
+        bool: True if email was sent successfully, False otherwise
+    """
+    # Get all users who can create dictionaries
+    users = get_dictionary_creator_users()
+    
+    if not users:
+        logger.warning("No users found to notify about task")
+        return False
+    
+    # Prepare email content
+    if status_change:
+        subject = str(_("Zmiana statusu zadania: {0}")).format(task.get_status_display())
+    else:
+        subject = str(_("Nowe zadanie: {0}")).format(task.title)
+    
+    # Format the description with line breaks for HTML
+    description_html = task.description.replace('\n', '<br>') if task.description else ""
+    
+    html_content = """
+    <html>
+    <body>
+        <h2>{subject}</h2>
+        <p><strong>Tytuł:</strong> {title}</p>
+        <p><strong>Typ zadania:</strong> {task_type}</p>
+        <p><strong>Status:</strong> {status}</p>
+        <p><strong>Data utworzenia:</strong> {created_at}</p>
+        
+        {description_section}
+        
+        <p>Możesz zobaczyć wszystkie zadania w <a href="{site_url}/dictionary/tasks/">panelu zadań</a>.</p>
+        <br>
+        <p>Pozdrawiamy,<br>
+        System Kindle Dictionary Creator</p>
+    </body>
+    </html>
+    """.format(
+        subject=subject,
+        title=task.title,
+        task_type=task.get_task_type_display(),
+        status=task.get_status_display(),
+        created_at=task.created_at.strftime("%Y-%m-%d %H:%M"),
+        description_section=f"""
+        <p><strong>Opis:</strong></p>
+        <div style="padding: 10px; border-left: 4px solid #ccc; margin-left: 20px;">
+            {description_html}
+        </div>
+        """ if description_html else "",
+        site_url=settings.SITE_URL
+    )
+    
+    # Send to all users
+    success = True
+    for user in users:
+        if user.email:
+            result = send_email(user.email, subject, html_content)
+            if not result:
+                logger.error(f"Failed to send task notification to {user.email}")
+                success = False
+    
+    return success
+
+def send_task_status_notification_to_submitter(task):
+    """
+    Send a notification to the task submitter about a status change.
+    
+    Args:
+        task: Task object that was updated
+        
+    Returns:
+        bool: True if email was sent successfully, False otherwise
+    """
+    if not task.email:
+        logger.info(f"No email address for task submitter: {task.id}")
+        return False
+    
+    # Prepare email content
+    subject = str(_("Aktualizacja statusu Twojego zgłoszenia"))
+    
+    html_content = """
+    <html>
+    <body>
+        <h2>Aktualizacja statusu Twojego zgłoszenia</h2>
+        <p>Witaj,</p>
+        <p>Status Twojego zgłoszenia <strong>"{title}"</strong> został zmieniony na <strong>{status}</strong>.</p>
+        
+        {additional_info}
+        
+        <p>Dziękujemy za Twoje zgłoszenie!</p>
+        <br>
+        <p>Pozdrawiamy,<br>
+        Zespół Kindle Dictionary Creator</p>
+    </body>
+    </html>
+    """.format(
+        title=task.title,
+        status=task.get_status_display(),
+        additional_info=get_status_additional_info(task)
+    )
+    
+    # Send to submitter
+    success = send_email(task.email, subject, html_content)
+    
+    if success:
+        logger.info(f"Status notification sent to {task.email} for task: {task.id}")
+    else:
+        logger.error(f"Failed to send status notification to {task.email} for task: {task.id}")
+    
+    return success
+
+def get_status_additional_info(task):
+    """
+    Get additional information based on task status.
+    
+    Args:
+        task: Task object
+        
+    Returns:
+        str: HTML content with additional information
+    """
+    if task.status == 'rejected':
+        rejection_reason = task.rejection_reason if task.rejection_reason else "Nie podano powodu odrzucenia."
+        return f"""
+        <p>Niestety, Twoje zgłoszenie zostało odrzucone.</p>
+        <p><strong>Powód odrzucenia:</strong></p>
+        <div style="padding: 10px; border-left: 4px solid #ccc; margin-left: 20px;">
+            {rejection_reason}
+        </div>
+        """
+    elif task.status == 'accepted':
+        return """
+        <p>Twoje zgłoszenie zostało zaakceptowane i oczekuje na realizację. 
+        Zostaniesz powiadomiony, gdy słownik zostanie utworzony.</p>
+        """
+    elif task.status == 'completed':
+        if task.related_dictionary:
+            return """
+            <p>Twoje zgłoszenie zostało zrealizowane! Słownik jest już dostępny do pobrania.</p>
+            <p>Możesz pobrać słownik z naszej strony: 
+            <a href="{site_url}/dictionary/{dictionary_id}/">Pobierz słownik</a></p>
+            """.format(
+                site_url=settings.SITE_URL,
+                dictionary_id=task.related_dictionary.id
+            )
+        else:
+            return """
+            <p>Twoje zgłoszenie zostało zrealizowane! Słownik powinien być już dostępny do pobrania na naszej stronie.</p>
+            """
+    else:
+        return ""

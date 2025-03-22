@@ -19,6 +19,15 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dictionary:create' %}">Stwórz słownik</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'dictionary:tasks' %}">
+                            Zadania
+                            {% get_new_tasks_count as new_tasks_count %}
+                            {% if new_tasks_count > 0 %}
+                                <span class="badge bg-danger">{{ new_tasks_count }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
                     {% endif %}
                     {% if not user.is_authenticated %}
                     <li class="nav-item">

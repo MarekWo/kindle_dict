@@ -362,6 +362,159 @@ class ContactMessage(models.Model):
         return f"Wiadomość - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 
 
+class Task(models.Model):
+    """Model for tasks in the system"""
+    
+    TASK_TYPE_CHOICES = (
+        ('dictionary_suggestion', _('Sugestia słownika')),
+        # W przyszłości można dodać więcej typów zadań
+    )
+    
+    STATUS_CHOICES = (
+        ('new', _('Nowe')),
+        ('accepted', _('Zaakceptowane')),
+        ('rejected', _('Odrzucone')),
+        ('completed', _('Zrealizowane')),
+    )
+    
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name=_("ID")
+    )
+    title = models.CharField(
+        max_length=255,
+        verbose_name=_("Tytuł")
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name=_("Opis")
+    )
+    task_type = models.CharField(
+        max_length=50,
+        choices=TASK_TYPE_CHOICES,
+        default='dictionary_suggestion',
+        verbose_name=_("Typ zadania")
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='new',
+        verbose_name=_("Status")
+    )
+    
+    # Pola dla zadań typu 'dictionary_suggestion'
+    content = models.TextField(
+        blank=True,
+        verbose_name=_("Zawartość słownika")
+    )
+    source_file = models.FileField(
+        upload_to='tasks/suggestions/',
+        null=True,
+        blank=True,
+        verbose_name=_("Plik źródłowy")
+    )
+    author_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Autor słownika")
+    )
+    rejection_reason = models.TextField(
+        blank=True,
+        verbose_name=_("Powód odrzucenia")
+    )
+    
+    # Pola dla powiadomień
+    email = models.EmailField(
+        blank=True,
+        verbose_name=_("Email zgłaszającego")
+    )
+    
+    # Pola dla śledzenia
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        verbose_name=_("Data utworzenia")
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Data aktualizacji")
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Data realizacji")
+    )
+    
+    # Powiązania
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_tasks',
+        verbose_name=_("Utworzone przez")
+    )
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_tasks',
+        verbose_name=_("Przypisane do")
+    )
+    
+    # Powiązanie z utworzonym słownikiem (dla zadań typu 'dictionary_suggestion')
+    related_dictionary = models.ForeignKey(
+        'Dictionary',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='related_tasks',
+        verbose_name=_("Powiązany słownik")
+    )
+    
+    class Meta:
+        verbose_name = _("Zadanie")
+        verbose_name_plural = _("Zadania")
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.title
+    
+    def is_archived(self):
+        """Sprawdza, czy zadanie jest w archiwum (zrealizowane lub odrzucone)"""
+        return self.status in ['completed', 'rejected']
+    
+    def is_pending(self):
+        """Sprawdza, czy zadanie oczekuje na realizację (zaakceptowane)"""
+        return self.status == 'accepted'
+    
+    def is_new(self):
+        """Sprawdza, czy zadanie jest nowe"""
+        return self.status == 'new'
+    
+    def mark_as_accepted(self, user=None):
+        """Oznacza zadanie jako zaakceptowane"""
+        self.status = 'accepted'
+        if user:
+            self.assigned_to = user
+        self.save()
+    
+    def mark_as_rejected(self):
+        """Oznacza zadanie jako odrzucone"""
+        self.status = 'rejected'
+        self.save()
+    
+    def mark_as_completed(self, dictionary=None):
+        """Oznacza zadanie jako zrealizowane"""
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        if dictionary:
+            self.related_dictionary = dictionary
+        self.save()
+
+
 class DictionarySuggestion(models.Model):
     """Model for dictionary suggestions from anonymous users"""
     
@@ -395,6 +548,11 @@ class DictionarySuggestion(models.Model):
         blank=True,
         verbose_name=_("Email")
     )
+    author_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Autor słownika")
+    )
     
     # Status and dates
     STATUS_CHOICES = (
@@ -414,6 +572,16 @@ class DictionarySuggestion(models.Model):
         verbose_name=_("Created At")
     )
     
+    # Powiązanie z zadaniem
+    task = models.OneToOneField(
+        Task,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='dictionary_suggestion',
+        verbose_name=_("Powiązane zadanie")
+    )
+    
     class Meta:
         verbose_name = _("Dictionary Suggestion")
         verbose_name_plural = _("Dictionary Suggestions")
@@ -421,3 +589,32 @@ class DictionarySuggestion(models.Model):
     
     def __str__(self):
         return self.name
+    
+    def create_task(self):
+        """Tworzy zadanie na podstawie sugestii słownika"""
+        if not self.task:
+            task = Task.objects.create(
+                title=f"Sugestia słownika: {self.name}",
+                description=self.description,
+                task_type='dictionary_suggestion',
+                content=self.content,
+                email=self.email,
+                author_name=self.author_name,
+                status='new'
+            )
+            
+            # Jeśli istnieje plik źródłowy, skopiuj go do zadania
+            if self.source_file:
+                from django.core.files.base import ContentFile
+                task.source_file.save(
+                    self.source_file.name,
+                    ContentFile(self.source_file.read()),
+                    save=True
+                )
+            
+            self.task = task
+            self.save()
+            
+            return task
+        
+        return self.task

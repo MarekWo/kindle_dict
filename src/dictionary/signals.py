@@ -6,9 +6,11 @@ Signal handlers for the Dictionary app.
 
 import os
 import logging
-from django.db.models.signals import post_delete, pre_save
+from django.db.models.signals import post_delete, pre_save, post_save
 from django.dispatch import receiver
-from .models import Dictionary
+from django.conf import settings
+from .models import Dictionary, DictionarySuggestion, Task
+from .email_utils import send_dictionary_completion_email, send_task_notification
 
 logger = logging.getLogger(__name__)
 
@@ -102,3 +104,41 @@ def auto_delete_files_on_change(sender, instance, **kwargs):
     
     except Exception as e:
         logger.error(f"Error handling file changes for Dictionary {instance.id}: {e}")
+
+@receiver(post_save, sender=Dictionary)
+def dictionary_post_save(sender, instance, created, **kwargs):
+    """
+    Signal handler for Dictionary model post_save event.
+    Sends email notification when dictionary is completed.
+    """
+    # Check if the dictionary is completed
+    if instance.status == 'completed':
+        # Sprawdź, czy słownik jest powiązany z zadaniem
+        tasks = Task.objects.filter(
+            task_type='dictionary_suggestion',
+            related_dictionary=instance
+        )
+        
+        # Jeśli słownik jest powiązany z zadaniem, nie wysyłaj dodatkowego powiadomienia
+        # ponieważ powiadomienie zostanie wysłane przez task_update_status
+        if not tasks.exists():
+            # Send email notification tylko jeśli słownik nie jest powiązany z zadaniem
+            send_dictionary_completion_email(instance)
+        
+        # Update related tasks if any
+        for task in tasks:
+            if task.status != 'completed':
+                task.mark_as_completed()
+
+@receiver(post_save, sender=DictionarySuggestion)
+def dictionary_suggestion_post_save(sender, instance, created, **kwargs):
+    """
+    Signal handler for DictionarySuggestion model post_save event.
+    Creates a task for new dictionary suggestions.
+    """
+    # Only create a task for new suggestions
+    if created:
+        # Create a task for this suggestion
+        instance.create_task()
+        
+        # Nie wysyłamy powiadomienia tutaj, ponieważ jest już wysyłane w widoku DictionarySuggestionCreateView

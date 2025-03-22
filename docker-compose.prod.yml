@@ -37,7 +37,7 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=kindle_dict.settings.prod
     restart: always
-    command: gunicorn kindle_dict.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+    command: gunicorn kindle_dict.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile=- --error-logfile=-
 
   # Baza danych PostgreSQL
   db:
