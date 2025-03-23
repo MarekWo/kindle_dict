@@ -8,7 +8,7 @@ import os
 import json
 import logging
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, View
 from django.views.generic.edit import UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import user_passes_test, login_required
@@ -23,9 +23,10 @@ from django.db.models import Count, Q
 from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task
 from .forms import (
     DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm, 
-    ContactMessageForm, CaptchaConfigurationForm, TaskForm, TaskStatusForm
+    ContactMessageForm, CaptchaConfigurationForm, TaskForm, TaskStatusForm, DictionaryChangeForm
 )
 from .tasks import process_dictionary
+import difflib
 from .email_utils import (
     send_test_email, send_contact_message_notification, send_task_notification,
     send_task_status_notification_to_submitter
@@ -186,6 +187,124 @@ class DictionarySuggestionCreateView(CreateView):
         
         return redirect(self.get_success_url())
 
+
+class DictionaryChangeView(View):
+    """View for anonymous users to submit dictionary change proposals"""
+    template_name = 'dictionary/change.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check if user is not authenticated"""
+        if request.user.is_authenticated:
+            messages.info(request, _("Zalogowani użytkownicy nie mogą proponować zmian w słownikach. Skontaktuj się z administratorem, aby uzyskać rolę Dictionary Edit."))
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get(self, request, *args, **kwargs):
+        """Handle GET request"""
+        dictionary = get_object_or_404(Dictionary, pk=kwargs['pk'])
+        
+        # Wczytaj zawartość słownika
+        initial_content = ""
+        if dictionary.source_file:
+            try:
+                with open(dictionary.source_file.path, 'r', encoding='utf-8') as f:
+                    initial_content = f.read()
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error(f"Nie udało się odczytać pliku źródłowego: {e}")
+        
+        form = DictionaryChangeForm(initial={'content': initial_content})
+        
+        context = {
+            'form': form,
+            'dictionary': dictionary
+        }
+        context.update(get_captcha_context('suggest'))  # Używamy tych samych ustawień CAPTCHA co dla propozycji słownika
+        
+        return render(request, self.template_name, context)
+    
+    def post(self, request, *args, **kwargs):
+        """Handle POST request"""
+        dictionary = get_object_or_404(Dictionary, pk=kwargs['pk'])
+        form = DictionaryChangeForm(request.POST, request.FILES)
+        
+        # Verify CAPTCHA if enabled
+        if is_captcha_enabled('suggest'):  # Używamy tych samych ustawień CAPTCHA co dla propozycji słownika
+            captcha_response = request.POST.get('cf-turnstile-response') or request.POST.get('g-recaptcha-response')
+            if not verify_captcha_response(captcha_response):
+                form.add_error(None, _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie."))
+                context = {
+                    'form': form,
+                    'dictionary': dictionary,
+                    'captcha_error': _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie.")
+                }
+                context.update(get_captcha_context('suggest'))
+                return render(request, self.template_name, context)
+        
+        if form.is_valid():
+            # Pobierz dane z formularza
+            author_name = form.cleaned_data.get('author_name') or "Nieznany"
+            email = form.cleaned_data.get('email')
+            description = form.cleaned_data.get('description')
+            content = form.cleaned_data.get('content')
+            source_file = form.cleaned_data.get('source_file')
+            
+            # Wczytaj oryginalną zawartość słownika
+            original_content = ""
+            if dictionary.source_file:
+                try:
+                    with open(dictionary.source_file.path, 'r', encoding='utf-8') as f:
+                        original_content = f.read()
+                except Exception as e:
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Nie udało się odczytać pliku źródłowego: {e}")
+            
+            # Utwórz zadanie dla propozycji zmian
+            task = Task.objects.create(
+                title=f"Propozycja zmian w słowniku: {dictionary.name}",
+                description=description,
+                task_type='dictionary_change',
+                status='new',
+                author_name=author_name,
+                email=email,
+                original_content=original_content,
+                related_dictionary=dictionary
+            )
+            
+            # Zapisz nową zawartość
+            if content:
+                task.content = content
+            
+            # Jeśli przesłano plik, zapisz go
+            if source_file:
+                task.source_file.save(source_file.name, source_file, save=False)
+                
+                # Jeśli nie ma zawartości w formularzu, ale jest plik, wczytaj zawartość z pliku
+                if not content:
+                    try:
+                        source_file.seek(0)
+                        task.content = source_file.read().decode('utf-8')
+                    except Exception as e:
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Nie udało się odczytać pliku źródłowego: {e}")
+            
+            task.save()
+            
+            # Wyślij powiadomienie o nowym zadaniu
+            send_task_notification(task)
+            
+            # Pokaż komunikat o sukcesie
+            messages.success(request, _("Dziękujemy za Twoją propozycję zmian! Zostanie ona sprawdzona przez naszych administratorów."))
+            return redirect('home')
+        
+        # Jeśli formularz jest nieprawidłowy, wyświetl go ponownie
+        context = {
+            'form': form,
+            'dictionary': dictionary
+        }
+        context.update(get_captcha_context('suggest'))
+        return render(request, self.template_name, context)
+
 class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     """View to display a list of tasks"""
     model = Task
@@ -263,6 +382,62 @@ class TaskDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                     logger.error(f"Nie udało się odczytać pliku źródłowego: {e}")
             
             context['dictionary_form'] = DictionaryForm(initial=initial_data)
+        
+        # Add dictionary update form if task is a dictionary change
+        elif self.object.task_type == 'dictionary_change' and self.object.status == 'accepted' and self.object.related_dictionary:
+            # Ustaw domyślną wartość dla updater_name
+            updater_name = self.object.author_name if self.object.author_name else "Nieznany"
+            
+            initial_data = {
+                'name': self.object.related_dictionary.name,
+                'description': self.object.related_dictionary.description,
+                'creator_name': self.object.related_dictionary.creator_name,
+                'updater_name': updater_name,
+                'notification_email': self.object.email,
+                'language_code': self.object.related_dictionary.language_code,
+                'is_public': self.object.related_dictionary.is_public,
+                'content': self.object.content,
+            }
+            
+            # Jeśli zadanie ma plik źródłowy, ale nie ma zawartości, wczytaj zawartość pliku
+            if self.object.source_file and not self.object.content:
+                try:
+                    with open(self.object.source_file.path, 'r', encoding='utf-8') as f:
+                        initial_data['content'] = f.read()
+                except Exception as e:
+                    # W przypadku błędu, zaloguj go, ale nie przerywaj działania
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Nie udało się odczytać pliku źródłowego: {e}")
+            
+            context['dictionary_update_form'] = DictionaryUpdateForm(initial=initial_data, instance=self.object.related_dictionary)
+            
+            # Dodaj porównanie zawartości
+            if self.object.original_content and self.object.content:
+                # Przygotuj listy linii do porównania
+                original_lines = self.object.original_content.splitlines()
+                new_lines = self.object.content.splitlines()
+                
+                # Utwórz porównanie
+                diff = difflib.unified_diff(
+                    original_lines,
+                    new_lines,
+                    lineterm='',
+                    n=3  # Kontekst - liczba linii przed i po zmianie
+                )
+                
+                # Konwertuj wynik na HTML
+                diff_html = []
+                for line in diff:
+                    if line.startswith('+'):
+                        diff_html.append(f'<div class="diff-added">{line}</div>')
+                    elif line.startswith('-'):
+                        diff_html.append(f'<div class="diff-removed">{line}</div>')
+                    elif line.startswith('@@'):
+                        diff_html.append(f'<div class="diff-info">{line}</div>')
+                    else:
+                        diff_html.append(f'<div class="diff-context">{line}</div>')
+                
+                context['diff_html'] = '\n'.join(diff_html)
         
         return context
 
@@ -395,6 +570,104 @@ def task_create_dictionary(request, pk):
                 'task': task,
                 'status_form': TaskStatusForm(instance=task),
                 'dictionary_form': form
+            })
+    
+    return redirect('dictionary:task_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(can_manage_tasks)
+def task_update_dictionary(request, pk):
+    """View to update a dictionary from a task"""
+    task = get_object_or_404(Task, pk=pk)
+    
+    if task.task_type != 'dictionary_change' or task.status != 'accepted' or not task.related_dictionary:
+        messages.error(request, _("Nie można zaktualizować słownika z tego zadania."))
+        return redirect('dictionary:task_detail', pk=pk)
+    
+    if request.method == 'POST':
+        form = DictionaryUpdateForm(request.POST, request.FILES, instance=task.related_dictionary)
+        if form.is_valid():
+            # Save the dictionary
+            dictionary = form.save(commit=False)
+            
+            # Increment build version
+            dictionary.build_version += 1
+            
+            # Set updater name if not provided
+            if not dictionary.updater_name and request.user.is_authenticated:
+                user = request.user
+                full_name = f"{user.first_name} {user.last_name}".strip()
+                if full_name:
+                    dictionary.updater_name = full_name
+                else:
+                    dictionary.updater_name = user.username
+            
+            # Handle content from textarea if provided
+            content = form.cleaned_data.get('content')
+            if content:
+                # Create a temporary file and save the content to it
+                import tempfile
+                
+                # Create a temporary file with the content
+                content_file = tempfile.NamedTemporaryFile(delete=False, suffix='.txt')
+                content_file.write(content.encode('utf-8'))
+                content_file.close()
+                
+                # Set the source_file field to this file
+                from django.core.files import File
+                with open(content_file.name, 'rb') as f:
+                    filename = f"{dictionary.name}.txt"
+                    dictionary.source_file.save(filename, File(f), save=False)
+                
+                # Clean up the temporary file
+                os.unlink(content_file.name)
+            # Jeśli nie podano zawartości ani pliku, ale zadanie ma zawartość lub plik
+            elif not content and not form.cleaned_data.get('source_file'):
+                if task.content:
+                    # Utwórz plik z zawartością zadania
+                    import tempfile
+                    
+                    content_file = tempfile.NamedTemporaryFile(delete=False, suffix='.txt')
+                    content_file.write(task.content.encode('utf-8'))
+                    content_file.close()
+                    
+                    from django.core.files import File
+                    with open(content_file.name, 'rb') as f:
+                        filename = f"{dictionary.name}.txt"
+                        dictionary.source_file.save(filename, File(f), save=False)
+                    
+                    os.unlink(content_file.name)
+                elif task.source_file:
+                    # Kopiuj plik z zadania
+                    from django.core.files.base import ContentFile
+                    dictionary.source_file.save(
+                        task.source_file.name,
+                        ContentFile(task.source_file.read()),
+                        save=False
+                    )
+            
+            # Set status and save the object
+            dictionary.status = 'pending'
+            dictionary.save()
+            
+            # Start the Celery task for processing the dictionary
+            process_dictionary.delay(str(dictionary.id))
+            
+            # Update task status
+            task.mark_as_completed(dictionary)
+            
+            # Send notification to submitter
+            send_task_status_notification_to_submitter(task)
+            
+            messages.success(request, _("Słownik został zaktualizowany i jest przetwarzany."))
+            return redirect('dictionary:tasks', tab='archive')
+        else:
+            messages.error(request, _("Wystąpił błąd podczas aktualizacji słownika."))
+            return render(request, 'dictionary/tasks/detail.html', {
+                'task': task,
+                'status_form': TaskStatusForm(instance=task),
+                'dictionary_update_form': form
             })
     
     return redirect('dictionary:task_detail', pk=pk)

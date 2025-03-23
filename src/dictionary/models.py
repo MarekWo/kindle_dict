@@ -367,6 +367,7 @@ class Task(models.Model):
     
     TASK_TYPE_CHOICES = (
         ('dictionary_suggestion', _('Sugestia słownika')),
+        ('dictionary_change', _('Propozycja zmian w słowniku')),
         # W przyszłości można dodać więcej typów zadań
     )
     
@@ -404,7 +405,7 @@ class Task(models.Model):
         verbose_name=_("Status")
     )
     
-    # Pola dla zadań typu 'dictionary_suggestion'
+    # Pola dla zadań typu 'dictionary_suggestion' i 'dictionary_change'
     content = models.TextField(
         blank=True,
         verbose_name=_("Zawartość słownika")
@@ -423,6 +424,12 @@ class Task(models.Model):
     rejection_reason = models.TextField(
         blank=True,
         verbose_name=_("Powód odrzucenia")
+    )
+    
+    # Pola dla zadań typu 'dictionary_change'
+    original_content = models.TextField(
+        blank=True,
+        verbose_name=_("Oryginalna zawartość słownika")
     )
     
     # Pola dla powiadomień

@@ -18,11 +18,13 @@ urlpatterns = [
     path('<uuid:pk>/download/<str:file_type>/', views.dictionary_download, name='download'),
     path('<uuid:pk>/delete/', views.dictionary_delete, name='delete'),
     
-    # Dictionary suggestions
-    path('suggest/', views.DictionarySuggestionCreateView.as_view(), name='suggest'),
+# Dictionary suggestions and changes
+path('suggest/', views.DictionarySuggestionCreateView.as_view(), name='suggest'),
+path('<uuid:pk>/change/', views.DictionaryChangeView.as_view(), name='change'),
     
-    # Tasks
-    path('tasks/', views.TaskListView.as_view(), name='tasks'),
+# Tasks
+path('tasks/', views.TaskListView.as_view(), name='tasks'),
+path('tasks/update-dictionary/<uuid:pk>/', views.task_update_dictionary, name='task_update_dictionary'),
     path('tasks/<str:tab>/', views.TaskListView.as_view(), name='tasks'),
     path('tasks/detail/<uuid:pk>/', views.TaskDetailView.as_view(), name='task_detail'),
     path('tasks/update-status/<uuid:pk>/', views.task_update_status, name='task_update_status'),

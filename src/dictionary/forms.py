@@ -377,3 +377,55 @@ class DictionarySuggestionForm(forms.ModelForm):
             raise forms.ValidationError(_("Musisz albo podać zawartość, albo przesłać plik."))
         
         return cleaned_data
+
+
+class DictionaryChangeForm(forms.Form):
+    """Form for submitting a dictionary change proposal"""
+    
+    author_name = forms.CharField(
+        max_length=255,
+        required=False,
+        label=_("Autor modyfikacji"),
+        help_text=_("Opcjonalne pole. Jeśli nie zostanie wypełnione, autor zostanie oznaczony jako \"Nieznany\"."),
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    email = forms.EmailField(
+        required=False,
+        label=_("Adres e-mail"),
+        help_text=_("Opcjonalny adres e-mail, na który zostanie wysłane powiadomienie o akceptacji lub odrzuceniu propozycji."),
+        widget=forms.EmailInput(attrs={'class': 'form-control'})
+    )
+    
+    description = forms.CharField(
+        required=False,
+        label=_("Opis zmian"),
+        help_text=_("Opcjonalny opis wprowadzonych zmian."),
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 5})
+    )
+    
+    content = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 15, 'class': 'form-control'}),
+        required=False,
+        label=_("Zawartość słownika"),
+        help_text=_("Wklej tutaj wpisy słownika lub prześlij plik poniżej.")
+    )
+    
+    source_file = forms.FileField(
+        required=False,
+        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
+        label=_("Plik źródłowy"),
+        help_text=_("Prześlij plik .txt z wpisami słownika."),
+        widget=forms.FileInput(attrs={'class': 'form-control'})
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        content = cleaned_data.get("content")
+        source_file = cleaned_data.get("source_file")
+        
+        # Either content or source_file must be provided
+        if not content and not source_file:
+            raise forms.ValidationError(_("Musisz albo podać zawartość, albo przesłać plik."))
+        
+        return cleaned_data
