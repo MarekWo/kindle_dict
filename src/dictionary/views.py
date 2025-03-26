@@ -20,10 +20,11 @@ from django.utils import timezone
 from django.conf import settings
 from django.db.models import Count, Q
 
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task, UserSettings
 from .forms import (
     DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm, 
-    ContactMessageForm, CaptchaConfigurationForm, TaskForm, TaskStatusForm, DictionaryChangeForm
+    ContactMessageForm, CaptchaConfigurationForm, TaskForm, TaskStatusForm, DictionaryChangeForm,
+    UserSettingsForm
 )
 from .tasks import process_dictionary
 import difflib
@@ -34,20 +35,52 @@ from .email_utils import (
 from .captcha_utils import verify_captcha_response, get_captcha_context, is_captcha_enabled
 
 class DictionaryListView(ListView):
-    """View to display a list of public dictionaries"""
+    """View to display a list of dictionaries"""
     model = Dictionary
     template_name = 'dictionary/list.html'
     context_object_name = 'dictionaries'
     
     def get_queryset(self):
-        """Filter to show only public dictionaries"""
-        return Dictionary.objects.filter(is_public=True, status='completed')
+        """Filter dictionaries based on user permissions"""
+        # Administratorzy widzą wszystkie słowniki, inni użytkownicy tylko publiczne
+        if self.request.user.is_authenticated and (
+            self.request.user.is_superuser or 
+            self.request.user.groups.filter(name='Dictionary Admin').exists()
+        ):
+            return Dictionary.objects.filter(status='completed')
+        else:
+            return Dictionary.objects.filter(is_public=True, status='completed')
+    
+    def get_context_data(self, **kwargs):
+        """Add additional context data"""
+        context = super().get_context_data(**kwargs)
+        # Dodaj informację, czy użytkownik widzi wszystkie słowniki
+        context['show_all_dictionaries'] = self.request.user.is_authenticated and (
+            self.request.user.is_superuser or 
+            self.request.user.groups.filter(name='Dictionary Admin').exists()
+        )
+        return context
 
 class DictionaryDetailView(DetailView):
     """View to display details of a dictionary"""
     model = Dictionary
     template_name = 'dictionary/detail.html'
     context_object_name = 'dictionary'
+    
+    def get_object(self, queryset=None):
+        """Get the dictionary object and check permissions"""
+        obj = super().get_object(queryset)
+        
+        # Sprawdź, czy słownik jest publiczny lub czy użytkownik ma uprawnienia administratora
+        if not obj.is_public and not (
+            self.request.user.is_authenticated and (
+                self.request.user.is_superuser or 
+                self.request.user.groups.filter(name='Dictionary Admin').exists()
+            )
+        ):
+            raise Http404(_("Słownik nie istnieje lub nie masz do niego dostępu."))
+        
+        return obj
     
     def get_context_data(self, **kwargs):
         """Add additional data to context"""
@@ -997,6 +1030,28 @@ class CaptchaConfigurationView(LoginRequiredMixin, UserPassesTestMixin, UpdateVi
         
         # Show success message
         messages.success(self.request, _("Konfiguracja CAPTCHA została zapisana."))
+        
+        return redirect(self.get_success_url())
+
+
+class UserSettingsView(LoginRequiredMixin, UpdateView):
+    """View to configure user settings"""
+    model = UserSettings
+    form_class = UserSettingsForm
+    template_name = 'dictionary/user_settings.html'
+    success_url = reverse_lazy('dictionary:user_settings')
+    
+    def get_object(self, queryset=None):
+        """Get the user settings object for the current user or create a new one if it doesn't exist"""
+        return UserSettings.get_for_user(self.request.user)
+    
+    def form_valid(self, form):
+        """Process the form if it's valid"""
+        # Zapisz obiekt
+        self.object = form.save()
+        
+        # Show success message
+        messages.success(self.request, _("Ustawienia użytkownika zostały zapisane."))
         
         return redirect(self.get_success_url())
 

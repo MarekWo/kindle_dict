@@ -111,6 +111,7 @@ def send_dictionary_completion_email(dictionary):
     """
     from django.contrib.auth import get_user_model
     from django.contrib.auth.models import User
+    from .models import UserSettings
     
     # Pobierz informacje o twórcy słownika z modelu Dictionary
     creator_name = dictionary.creator_name
@@ -164,12 +165,25 @@ def send_dictionary_completion_email(dictionary):
         logger.warning(f"Could not find any user for dictionary creator: {creator_name}")
         return False
     
-    # Get the first matching user's email
-    creator_email = matching_users[0].email
+    # Get the first matching user
+    user = matching_users[0]
+    creator_email = user.email
     
     if not creator_email:
-        logger.warning(f"User found but has no email: {matching_users[0].username}")
+        logger.warning(f"User found but has no email: {user.username}")
         return False
+    
+    # Sprawdź ustawienia powiadomień użytkownika
+    try:
+        user_settings = UserSettings.get_for_user(user)
+        if not user_settings.email_dictionary_notifications:
+            logger.info(f"User {user.username} has disabled dictionary notifications")
+            # Jeśli użytkownik wyłączył powiadomienia, ale jest dodatkowy adres email, wyślij tylko na dodatkowy adres
+            if dictionary.notification_email:
+                return send_dictionary_notification_to_email(dictionary, dictionary.notification_email)
+            return False
+    except Exception as e:
+        logger.error(f"Error checking user settings: {e}")
     
     # Prepare email content
     subject = str(_("Twój słownik został utworzony"))
@@ -211,6 +225,48 @@ def send_dictionary_completion_email(dictionary):
         
         # Return True only if both emails were sent successfully
         return success and additional_success
+    
+    return success
+
+def send_dictionary_notification_to_email(dictionary, email):
+    """
+    Send a dictionary completion notification to a specific email address.
+    
+    Args:
+        dictionary: Dictionary object that was completed
+        email: Email address to send the notification to
+        
+    Returns:
+        bool: True if email was sent successfully, False otherwise
+    """
+    # Prepare email content
+    subject = str(_("Słownik został utworzony"))
+    html_content = """
+    <html>
+    <body>
+        <h2>Słownik został utworzony</h2>
+        <p>Witaj,</p>
+        <p>Słownik <strong>{dictionary_name}</strong> został pomyślnie utworzony.</p>
+        <p>Możesz go pobrać z naszej strony:</p>
+        <p><a href="{site_url}/dictionary/{dictionary_id}/">Pobierz słownik</a></p>
+        <br>
+        <p>Pozdrawiamy,<br>
+        Zespół Kindle Dictionary Creator</p>
+    </body>
+    </html>
+    """.format(
+        dictionary_name=dictionary.name,
+        dictionary_id=dictionary.id,
+        site_url=settings.SITE_URL
+    )
+    
+    # Send the email
+    success = send_email(email, subject, html_content)
+    
+    if success:
+        logger.info(f"Dictionary notification sent to {email} for dictionary: {dictionary.id}")
+    else:
+        logger.error(f"Failed to send dictionary notification to {email} for dictionary: {dictionary.id}")
     
     return success
 
@@ -379,6 +435,8 @@ def send_task_notification(task, status_change=False):
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
+    from .models import UserSettings
+    
     # Get all users who can create dictionaries
     users = get_dictionary_creator_users()
     
@@ -427,10 +485,19 @@ def send_task_notification(task, status_change=False):
         site_url=settings.SITE_URL
     )
     
-    # Send to all users
+    # Send to all users who have task notifications enabled
     success = True
     for user in users:
         if user.email:
+            # Sprawdź ustawienia powiadomień użytkownika
+            try:
+                user_settings = UserSettings.get_for_user(user)
+                if not user_settings.email_task_notifications:
+                    logger.info(f"User {user.username} has disabled task notifications")
+                    continue
+            except Exception as e:
+                logger.error(f"Error checking user settings: {e}")
+            
             result = send_email(user.email, subject, html_content)
             if not result:
                 logger.error(f"Failed to send task notification to {user.email}")

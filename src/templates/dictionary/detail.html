@@ -10,7 +10,12 @@
         <div class="col-lg-8 mx-auto">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h1 class="card-title">{{ dictionary.name }}</h1>
+                    <h1 class="card-title">
+                        {{ dictionary.name }}
+                        {% if not dictionary.is_public %}
+                        <span class="badge bg-secondary ms-2" title="Słownik niepubliczny">Niepubliczny</span>
+                        {% endif %}
+                    </h1>
                     <h6 class="card-subtitle mb-3 text-muted">Autor: {{ dictionary.creator_name }}</h6>
                     
                     <div class="mb-4">
@@ -21,6 +26,13 @@
                         <div class="col-md-6">
                             <p><strong>Język:</strong> {{ dictionary.language_code }}</p>
                             <p><strong>Wersja:</strong> {{ dictionary.build_version }}</p>
+                            <p><strong>Status publiczny:</strong> 
+                                {% if dictionary.is_public %}
+                                <span class="badge bg-success">Publiczny</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Niepubliczny</span>
+                                {% endif %}
+                            </p>
                         </div>
                         <div class="col-md-6">
                             <p><strong>Data utworzenia:</strong> {{ dictionary.created_at|date:"d.m.Y H:i" }}</p>

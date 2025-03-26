@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Ustawienia użytkownika" %} | Kindle Dictionary Creator{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2>{% trans "Ustawienia użytkownika" %}</h2>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <h4>{% trans "Ustawienia powiadomień email" %}</h4>
+                            <p class="text-muted">{% trans "Dostosuj, jakie powiadomienia email chcesz otrzymywać." %}</p>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.email_dictionary_notifications }}
+                            <label class="form-check-label" for="{{ form.email_dictionary_notifications.id_for_label }}">
+                                {{ form.email_dictionary_notifications.label }}
+                            </label>
+                            {% if form.email_dictionary_notifications.help_text %}
+                                <small class="form-text text-muted">{{ form.email_dictionary_notifications.help_text }}</small>
+                            {% endif %}
+                            {% if form.email_dictionary_notifications.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email_dictionary_notifications.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.email_task_notifications }}
+                            <label class="form-check-label" for="{{ form.email_task_notifications.id_for_label }}">
+                                {{ form.email_task_notifications.label }}
+                            </label>
+                            {% if form.email_task_notifications.help_text %}
+                                <small class="form-text text-muted">{{ form.email_task_notifications.help_text }}</small>
+                            {% endif %}
+                            {% if form.email_task_notifications.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email_task_notifications.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">{% trans "Zapisz ustawienia" %}</button>
+                            <a href="{% url 'home' %}" class="btn btn-secondary">{% trans "Anuluj" %}</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

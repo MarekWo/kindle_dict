@@ -625,3 +625,48 @@ class DictionarySuggestion(models.Model):
             return task
         
         return self.task
+
+
+class UserSettings(models.Model):
+    """Model for user settings"""
+    
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='settings',
+        verbose_name=_("Użytkownik")
+    )
+    
+    # Ustawienia powiadomień email
+    email_dictionary_notifications = models.BooleanField(
+        default=True,
+        verbose_name=_("Powiadomienia o utworzeniu słownika"),
+        help_text=_("Otrzymuj powiadomienia email o utworzeniu słownika.")
+    )
+    email_task_notifications = models.BooleanField(
+        default=True,
+        verbose_name=_("Powiadomienia o nowych zadaniach"),
+        help_text=_("Otrzymuj powiadomienia email o nowych zadaniach i zmianach statusu zadań.")
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Data utworzenia")
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Data aktualizacji")
+    )
+    
+    class Meta:
+        verbose_name = _("Ustawienia użytkownika")
+        verbose_name_plural = _("Ustawienia użytkowników")
+    
+    def __str__(self):
+        return f"Ustawienia użytkownika: {self.user.username}"
+    
+    @classmethod
+    def get_for_user(cls, user):
+        """Get or create settings for user"""
+        settings, created = cls.objects.get_or_create(user=user)
+        return settings

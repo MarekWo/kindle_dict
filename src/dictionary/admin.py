@@ -7,7 +7,7 @@ Admin configuration for the Dictionary app.
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task
+from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task, UserSettings
 
 @admin.register(Dictionary)
 class DictionaryAdmin(admin.ModelAdmin):
@@ -239,3 +239,22 @@ class CaptchaConfigurationAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Prevent deletion of the configuration"""
         return False
+
+@admin.register(UserSettings)
+class UserSettingsAdmin(admin.ModelAdmin):
+    """Admin for UserSettings model"""
+    list_display = ('user', 'email_dictionary_notifications', 'email_task_notifications', 'updated_at')
+    list_filter = ('email_dictionary_notifications', 'email_task_notifications')
+    search_fields = ('user__username', 'user__email', 'user__first_name', 'user__last_name')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (None, {
+            'fields': ('user',)
+        }),
+        (_('Ustawienia powiadomień email'), {
+            'fields': ('email_dictionary_notifications', 'email_task_notifications')
+        }),
+        (_('Daty'), {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )

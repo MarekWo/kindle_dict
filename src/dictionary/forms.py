@@ -429,3 +429,16 @@ class DictionaryChangeForm(forms.Form):
             raise forms.ValidationError(_("Musisz albo podać zawartość, albo przesłać plik."))
         
         return cleaned_data
+
+
+class UserSettingsForm(forms.ModelForm):
+    """Form for user settings"""
+    
+    class Meta:
+        from .models import UserSettings
+        model = UserSettings
+        fields = ['email_dictionary_notifications', 'email_task_notifications']
+        widgets = {
+            'email_dictionary_notifications': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'email_task_notifications': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }

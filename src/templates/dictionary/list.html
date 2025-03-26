@@ -1,14 +1,20 @@
 {% extends 'base.html' %}
 
 {% comment %} kindle_dict\src\templates\dictionary\list.html {% endcomment %}
-{% block title %}Publiczne słowniki{% endblock %}
+{% block title %}{% if show_all_dictionaries %}Wszystkie słowniki{% else %}Publiczne słowniki{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Publiczne słowniki</h1>
+        <h1>{% if show_all_dictionaries %}Wszystkie słowniki{% else %}Publiczne słowniki{% endif %}</h1>
         <a href="{% url 'dictionary:create' %}" class="btn btn-primary">Utwórz nowy słownik</a>
     </div>
+    
+    {% if show_all_dictionaries %}
+    <div class="alert alert-info mb-4">
+        <p class="mb-0"><i class="fas fa-info-circle"></i> Jako administrator widzisz wszystkie słowniki, w tym niepubliczne.</p>
+    </div>
+    {% endif %}
     
     {% if dictionaries %}
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
@@ -16,7 +22,12 @@
                 <div class="col">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h5 class="card-title">{{ dictionary.name }}</h5>
+                            <h5 class="card-title">
+                                {{ dictionary.name }}
+                                {% if show_all_dictionaries and not dictionary.is_public %}
+                                <span class="badge bg-secondary ms-2" title="Słownik niepubliczny">Niepubliczny</span>
+                                {% endif %}
+                            </h5>
                             <h6 class="card-subtitle mb-2 text-muted">{{ dictionary.creator_name }}</h6>
                             <p class="card-text">{{ dictionary.description|truncatechars:100 }}</p>
                             <div class="d-flex justify-content-between align-items-center">
@@ -34,7 +45,7 @@
         </div>
     {% else %}
         <div class="alert alert-info">
-            <p>Brak publicznych słowników. Bądź pierwszy i utwórz własny słownik!</p>
+            <p>{% if show_all_dictionaries %}Brak słowników w systemie.{% else %}Brak publicznych słowników.{% endif %} Bądź pierwszy i utwórz własny słownik!</p>
             <a href="{% url 'dictionary:create' %}" class="btn btn-primary mt-2">Utwórz słownik</a>
         </div>
     {% endif %}

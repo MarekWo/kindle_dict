@@ -35,6 +35,7 @@ path('tasks/update-dictionary/<uuid:pk>/', views.task_update_dictionary, name='t
     path('config/smtp/', views.SMTPConfigurationView.as_view(), name='smtp_config'),
     path('config/smtp/test/', views.test_smtp_email, name='test_smtp_email'),
     path('config/captcha/', views.CaptchaConfigurationView.as_view(), name='captcha_config'),
+    path('config/user-settings/', views.UserSettingsView.as_view(), name='user_settings'),
     
     # Contact form
     path('contact/', views.ContactMessageCreateView.as_view(), name='contact'),
