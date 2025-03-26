@@ -1096,6 +1096,16 @@ class HelpSuggestView(ListView):
         return Dictionary.objects.none()
 
 
+class HelpChangeView(ListView):
+    """View to display help on how to suggest a dictionary change"""
+    model = Dictionary  # Używamy tego modelu, ale nie będziemy wyświetlać jego danych
+    template_name = 'dictionary/help/change.html'
+    
+    def get_queryset(self):
+        """Return an empty queryset"""
+        return Dictionary.objects.none()
+
+
 class HelpPromptView(ListView):
     """View to display example AI prompt"""
     model = Dictionary  # Używamy tego modelu, ale nie będziemy wyświetlać jego danych

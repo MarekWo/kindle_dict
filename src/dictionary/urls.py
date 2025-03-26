@@ -42,6 +42,7 @@ path('tasks/update-dictionary/<uuid:pk>/', views.task_update_dictionary, name='t
     
     # Help pages
     path('help/suggest/', views.HelpSuggestView.as_view(), name='help_suggest'),
+    path('help/change/', views.HelpChangeView.as_view(), name='help_change'),
     path('help/prompt/', views.HelpPromptView.as_view(), name='help_prompt'),
     path('help/kindle/', views.HelpKindleView.as_view(), name='help_kindle'),
 ]

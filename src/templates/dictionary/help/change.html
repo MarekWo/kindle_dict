@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% comment %} kindle_dict\src\templates\dictionary\help\change.html {% endcomment %}
+{% block title %}Jak zaproponować poprawkę słownika{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Jak zaproponować poprawkę słownika</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Krok po kroku</h5>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-4">
+                        <li class="mb-3">Otwórz wybrany słownik, do którego chcesz zaproponować poprawkę.</li>
+                        <li class="mb-3">Kliknij przycisk <strong>"Zaproponuj zmianę"</strong> na stronie szczegółów słownika.</li>
+                        <li class="mb-3">Wypełnij formularz propozycji zmian:
+                            <ul class="mt-2">
+                                <li><strong>Twoje imię</strong> (opcjonalnie) - podaj swoje imię lub pseudonim</li>
+                                <li><strong>Email</strong> (opcjonalnie) - podaj swój adres email, jeśli chcesz być powiadomiony o statusie Twojej propozycji</li>
+                                <li><strong>Opis zmian</strong> (bardzo rekomendowane) - opisz, jakie zmiany proponujesz i dlaczego</li>
+                                <li><strong>Zawartość słownika</strong> - dokonaj zmian w polu zawierającym aktualną treść słownika</li>
+                                <li><strong>Plik źródłowy</strong> (opcjonalnie) - alternatywnie możesz pobrać plik źródłowy .txt, dokonać w nim zmian i załączyć go w formularzu</li>
+                            </ul>
+                        </li>
+                        <li class="mb-3">Rozwiąż CAPTCHA, aby potwierdzić, że nie jesteś robotem.</li>
+                        <li class="mb-3">Kliknij przycisk <strong>"Wyślij propozycję zmian"</strong>.</li>
+                        <li>Otrzymasz potwierdzenie na stronie oraz email z informacją o przyjęciu propozycji do rozpatrzenia (jeśli podałeś adres email).</li>
+                    </ol>
+                    <p>Po wysłaniu propozycji, nasi administratorzy sprawdzą ją i podejmą decyzję o jej zatwierdzeniu lub odrzuceniu. Jeśli podałeś adres email, zostaniesz poinformowany o decyzji drogą mailową.</p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Rodzaje poprawek</h5>
+                </div>
+                <div class="card-body">
+                    <p>Możesz zaproponować różne rodzaje poprawek do istniejącego słownika:</p>
+                    
+                    <h6 class="mt-4">Poprawki treści:</h6>
+                    <ul>
+                        <li>Dodanie nowych haseł, które brakują w słowniku</li>
+                        <li>Usunięcie niepoprawnych lub zbędnych haseł</li>
+                        <li>Korekta definicji istniejących haseł</li>
+                        <li>Dodanie brakujących odmian do istniejących haseł</li>
+                        <li>Poprawienie błędów ortograficznych lub gramatycznych</li>
+                    </ul>
+                    
+                    <h6 class="mt-4">Poprawki metadanych:</h6>
+                    <ul>
+                        <li>Aktualizacja opisu słownika</li>
+                        <li>Korekta nazwy słownika</li>
+                    </ul>
+                    
+                    <p class="mt-4">Pamiętaj, aby zachować oryginalny format słownika podczas wprowadzania zmian:</p>
+                    <pre class="bg-light p-3 rounded">
+Hasło | {odmiana1, odmiana2, odmiana3} Definicja hasła.
+
+~Grupa_haseł | {odmiana1, odmiana2, odmiana3} Definicja grupy haseł.
+
++Podhasło | {odmiana1, odmiana2, odmiana3} Definicja podhasła.</pre>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Wskazówki</h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li>Przed zaproponowaniem zmian, dokładnie zapoznaj się z aktualną zawartością słownika.</li>
+                        <li>Jeśli planujesz wprowadzić wiele zmian, zalecamy pobranie pliku źródłowego, wprowadzenie zmian lokalnie, a następnie załączenie zaktualizowanego pliku.</li>
+                        <li>W opisie zmian dokładnie wyjaśnij, co zostało zmienione i dlaczego - pomoże to administratorom w ocenie Twojej propozycji.</li>
+                        <li>Upewnij się, że wszystkie nowe hasła i definicje są zgodne z formatem słownika.</li>
+                        <li>Pamiętaj o wszystkich możliwych odmianach słów - to pozwoli na lepsze działanie słownika na Kindle.</li>
+                        <li>Jeśli nie jesteś pewien formatu, zapoznaj się z instrukcją "Jak zaproponować nowy słownik", która zawiera szczegółowe informacje na temat formatu.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="text-center mb-4">
+                <a href="{% url 'dictionary:list' %}" class="btn btn-primary">Przejdź do listy słowników</a>
+                <a href="{% url 'dictionary:help_suggest' %}" class="btn btn-outline-secondary ms-2">Jak zaproponować nowy słownik</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
