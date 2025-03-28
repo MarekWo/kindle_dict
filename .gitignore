@@ -77,6 +77,5 @@ Desktop.ini
 /media/
 /logs/
 
-# diff files
-help_changes.diff
-user_settings_changes.diff
+# batch files
+start_process_kindlegen_jobs.bat

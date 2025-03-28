@@ -17,6 +17,7 @@ urlpatterns = [
     path('<uuid:pk>/update/', views.DictionaryUpdateView.as_view(), name='update'),
     path('<uuid:pk>/download/<str:file_type>/', views.dictionary_download, name='download'),
     path('<uuid:pk>/delete/', views.dictionary_delete, name='delete'),
+    path('<uuid:pk>/toggle-public/', views.toggle_dictionary_public, name='toggle_public'),
     
 # Dictionary suggestions and changes
 path('suggest/', views.DictionarySuggestionCreateView.as_view(), name='suggest'),

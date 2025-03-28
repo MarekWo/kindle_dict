@@ -12,6 +12,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, V
 from django.views.generic.edit import UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import user_passes_test, login_required
+from django.http import HttpResponseForbidden
 from django.contrib import messages
 from django.http import FileResponse, Http404, JsonResponse
 from django.urls import reverse_lazy
@@ -1124,3 +1125,29 @@ class HelpKindleView(ListView):
     def get_queryset(self):
         """Return an empty queryset"""
         return Dictionary.objects.none()
+
+
+@login_required
+def toggle_dictionary_public(request, pk):
+    """View to toggle dictionary public status"""
+    # Get the dictionary object
+    dictionary = get_object_or_404(Dictionary, pk=pk)
+    
+    # Check if user has permission to change dictionary public status
+    if not (request.user.is_superuser or 
+            request.user.groups.filter(name__in=['Dictionary Admin', 'Dictionary Edit']).exists()):
+        messages.error(request, _("Nie masz uprawnień do zmiany statusu publicznego słownika."))
+        return HttpResponseForbidden()
+    
+    # Toggle the is_public status
+    dictionary.is_public = not dictionary.is_public
+    dictionary.save()
+    
+    # Show success message
+    if dictionary.is_public:
+        messages.success(request, _("Słownik został upubliczniony."))
+    else:
+        messages.success(request, _("Słownik został ukryty."))
+    
+    # Redirect back to the dictionary detail page
+    return redirect('dictionary:detail', pk=pk)
