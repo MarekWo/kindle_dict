@@ -7,6 +7,7 @@ Views for the Dictionary app.
 import os
 import json
 import logging
+import re
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, View
 from django.views.generic.edit import UpdateView
@@ -14,7 +15,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.http import HttpResponseForbidden
 from django.contrib import messages
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, Http404, JsonResponse, HttpResponse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -1126,6 +1127,49 @@ class HelpKindleView(ListView):
         """Return an empty queryset"""
         return Dictionary.objects.none()
 
+
+def search_dictionaries(request):
+    """API endpoint to search dictionaries by name"""
+    query = request.GET.get('q', '').strip()
+    
+    # Jeśli zapytanie jest krótsze niż 3 znaki, zwróć pustą listę
+    if len(query) < 3:
+        return JsonResponse({'dictionaries': []})
+    
+    # Filtruj słowniki na podstawie zapytania
+    if request.user.is_authenticated and (
+        request.user.is_superuser or 
+        request.user.groups.filter(name='Dictionary Admin').exists()
+    ):
+        # Administratorzy widzą wszystkie słowniki
+        dictionaries = Dictionary.objects.filter(
+            name__icontains=query,
+            status='completed'
+        )
+    else:
+        # Inni użytkownicy widzą tylko publiczne słowniki
+        dictionaries = Dictionary.objects.filter(
+            name__icontains=query,
+            is_public=True,
+            status='completed'
+        )
+    
+    # Przygotuj dane do zwrócenia jako JSON
+    result = []
+    for dictionary in dictionaries:
+        result.append({
+            'id': str(dictionary.id),
+            'name': dictionary.name,
+            'creator_name': dictionary.creator_name,
+            'description': dictionary.description[:100] + '...' if len(dictionary.description) > 100 else dictionary.description,
+            'build_version': dictionary.build_version,
+            'built_at': dictionary.built_at.strftime('%d.%m.%Y') if dictionary.built_at else '',
+            'is_public': dictionary.is_public,
+            'detail_url': f'/dictionary/{dictionary.id}/',
+            'download_url': f'/dictionary/{dictionary.id}/download/mobi/'
+        })
+    
+    return JsonResponse({'dictionaries': result})
 
 @login_required
 def toggle_dictionary_public(request, pk):

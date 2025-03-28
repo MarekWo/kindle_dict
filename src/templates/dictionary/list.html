@@ -16,8 +16,24 @@
     </div>
     {% endif %}
     
-    {% if dictionaries %}
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    <!-- Pole wyszukiwania -->
+    <div class="mb-4">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" id="dictionary-search" class="form-control" placeholder="Wyszukaj słownik..." aria-label="Wyszukaj słownik">
+        </div>
+        <small class="text-muted mt-1">Wpisz minimum 3 znaki, aby rozpocząć wyszukiwanie.</small>
+    </div>
+    
+    <div id="search-results" style="display: none;">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="search-results-container">
+            <!-- Tutaj będą wyświetlane wyniki wyszukiwania -->
+        </div>
+    </div>
+    
+    <div id="all-dictionaries">
+        {% if dictionaries %}
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             {% for dictionary in dictionaries %}
                 <div class="col">
                     <div class="card h-100">
@@ -43,11 +59,108 @@
                 </div>
             {% endfor %}
         </div>
-    {% else %}
-        <div class="alert alert-info">
-            <p>{% if show_all_dictionaries %}Brak słowników w systemie.{% else %}Brak publicznych słowników.{% endif %} Bądź pierwszy i utwórz własny słownik!</p>
-            <a href="{% url 'dictionary:create' %}" class="btn btn-primary mt-2">Utwórz słownik</a>
-        </div>
-    {% endif %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <p>{% if show_all_dictionaries %}Brak słowników w systemie.{% else %}Brak publicznych słowników.{% endif %} Bądź pierwszy i utwórz własny słownik!</p>
+                <a href="{% url 'dictionary:create' %}" class="btn btn-primary mt-2">Utwórz słownik</a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div id="no-results" class="alert alert-info" style="display: none;">
+        <p>Nie znaleziono słowników pasujących do podanych kryteriów.</p>
+    </div>
 </div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('dictionary-search');
+        const allDictionariesDiv = document.getElementById('all-dictionaries');
+        const searchResultsDiv = document.getElementById('search-results');
+        const searchResultsContainer = document.getElementById('search-results-container');
+        const noResultsDiv = document.getElementById('no-results');
+        
+        let searchTimeout = null;
+        
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            // Wyczyść poprzedni timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Jeśli zapytanie jest krótsze niż 3 znaki, pokaż wszystkie słowniki
+            if (query.length < 3) {
+                allDictionariesDiv.style.display = 'block';
+                searchResultsDiv.style.display = 'none';
+                noResultsDiv.style.display = 'none';
+                return;
+            }
+            
+            // Ustaw timeout, aby nie wysyłać zapytania przy każdym wciśnięciu klawisza
+            searchTimeout = setTimeout(function() {
+                // Wykonaj zapytanie AJAX
+                fetch(`{% url 'dictionary:search' %}?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Wyczyść kontener wyników
+                        searchResultsContainer.innerHTML = '';
+                        
+                        // Jeśli są wyniki, wyświetl je
+                        if (data.dictionaries && data.dictionaries.length > 0) {
+                            data.dictionaries.forEach(dictionary => {
+                                const card = document.createElement('div');
+                                card.className = 'col';
+                                
+                                let publicBadge = '';
+                                if ('{{ show_all_dictionaries }}' === 'True' && !dictionary.is_public) {
+                                    publicBadge = '<span class="badge bg-secondary ms-2" title="Słownik niepubliczny">Niepubliczny</span>';
+                                }
+                                
+                                card.innerHTML = `
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                ${dictionary.name}
+                                                ${publicBadge}
+                                            </h5>
+                                            <h6 class="card-subtitle mb-2 text-muted">${dictionary.creator_name}</h6>
+                                            <p class="card-text">${dictionary.description}</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">Wersja: ${dictionary.build_version}</small>
+                                                <small class="text-muted">${dictionary.built_at}</small>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <a href="${dictionary.detail_url}" class="btn btn-sm btn-primary">Szczegóły</a>
+                                            <a href="${dictionary.download_url}" class="btn btn-sm btn-success">Pobierz MOBI</a>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                searchResultsContainer.appendChild(card);
+                            });
+                            
+                            // Pokaż wyniki, ukryj wszystkie słowniki i komunikat o braku wyników
+                            searchResultsDiv.style.display = 'block';
+                            allDictionariesDiv.style.display = 'none';
+                            noResultsDiv.style.display = 'none';
+                        } else {
+                            // Jeśli nie ma wyników, pokaż komunikat o braku wyników
+                            searchResultsDiv.style.display = 'none';
+                            allDictionariesDiv.style.display = 'none';
+                            noResultsDiv.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Błąd podczas wyszukiwania:', error);
+                    });
+            }, 300); // 300ms opóźnienia
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}

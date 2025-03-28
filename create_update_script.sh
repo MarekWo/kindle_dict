@@ -28,9 +28,12 @@ echo -e \"\${GREEN}Rozpoczynam aktualizację aplikacji Kindle Dictionary Creator
 # Przejście do katalogu projektu
 cd kindle_dict
 
-# Pobranie najnowszych zmian z GitHuba
+# Zamiast git pull, który może powodować problemy z rozbieżnymi gałęziami,
+# używamy kombinacji fetch + reset --hard, która zawsze dopasuje lokalną kopię
+# do zdalnego repozytorium, niezależnie od historii zmian
 echo -e \"\${YELLOW}Pobieranie najnowszych zmian z GitHuba...\${NC}\"
-git pull
+git fetch origin
+git reset --hard origin/main
 
 # Zatrzymanie kontenerów
 echo -e \"\${YELLOW}Zatrzymywanie kontenerów...\${NC}\"

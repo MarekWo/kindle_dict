@@ -12,6 +12,7 @@ app_name = 'dictionary'
 urlpatterns = [
     # Dictionary views
     path('', views.DictionaryListView.as_view(), name='list'),
+    path('search/', views.search_dictionaries, name='search'),
     path('create/', views.DictionaryCreateView.as_view(), name='create'),
     path('<uuid:pk>/', views.DictionaryDetailView.as_view(), name='detail'),
     path('<uuid:pk>/update/', views.DictionaryUpdateView.as_view(), name='update'),
