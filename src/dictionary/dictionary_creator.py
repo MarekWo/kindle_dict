@@ -192,11 +192,15 @@ def generate_entry_html(entry, indent=0):
     # Use <h2> for all entries
     header_tag = 'h2'
 
+    # Process description to handle multiple paragraphs
+    # Replace \n with </p><p> to create separate paragraphs
+    processed_description = description.replace('\\n', '</p><p>')
+
     # Build entry
     entry_html = indent_str + f'''        <idx:entry name="word" scriptable="yes">
 {indent_str}            <idx:orth value="{term.lower()}">
 {indent_str}                <{header_tag}>{term}</{header_tag}>{idx_infl}{indent_str}            </idx:orth>
-{indent_str}            <p>{description}</p>
+{indent_str}            <p>{processed_description}</p>
 '''
     # Process children if any
     if 'children' in entry and entry['children']:
