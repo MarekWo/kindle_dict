@@ -16,35 +16,6 @@ from datetime import datetime
 from django.conf import settings
 from django.core.files import File
 
-def read_file_preserving_cr(file_path):
-    """
-    Czyta plik zachowując oryginalne znaki \r jako separatory,
-    ale normalizując końce linii pliku.
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    # KROK 1: Czytaj jako binary
-    with open(file_path, 'rb') as f:
-        raw_bytes = f.read()
-    
-    # KROK 2: Dekoduj do tekstu
-    try:
-        content = raw_bytes.decode('utf-8')
-    except UnicodeDecodeError:
-        # Fallback dla plików w innych kodowaniach
-        content = raw_bytes.decode('utf-8', errors='ignore')
-    
-    logger.info(f"Raw content preview: {repr(content[:200])}")
-    
-    # KROK 3: Zamień tylko \r\n na \n (końce linii Windows)
-    # ALE zostaw jednotne \r jako separatory
-    content = content.replace('\r\n', '\n')
-    
-    logger.info(f"After CRLF normalization: {repr(content[:200])}")
-    
-    return content
-
 def parse_line(line):
     """Parse a line of dictionary content to extract term, inflections and description."""
     match = re.match(r'^(.*?)\s*\|\s*(\{.*?\})?\s+(.*)$', line)
@@ -78,15 +49,15 @@ def process_dictionary_content(content, base_filename, work_dir, language_info, 
     Returns:
         Dictionary with paths to generated files
     """
-    # Process entries        
+    # Process entries
+    logger.info('****WERSJA 2*****')    
+    content = content.replace('\r', '<br>')    
 
     lines = content.split('\n')
-    logger.info(f"Split into {len(lines)} lines")
-
     entries = []
     current_group = None
     
-    for i, line in enumerate(lines):
+    for line in lines:
         line = line.strip()        
 
         logger.info(f'Processing line: {line}')
@@ -121,8 +92,6 @@ def process_dictionary_content(content, base_filename, work_dir, language_info, 
             entries.append(entry)
             current_group = None  # Reset current group
     
-    logger.info(f"Processed {len(entries)} total entries")
-
     # Generate files
     file_paths = {}
     
@@ -235,7 +204,7 @@ def generate_entry_html(entry, indent=0):
     # Process description to handle multiple paragraphs
     # Replace linebreaks with </p><p> to create separate paragraphs
     # processed_description = description.replace('\\n', '</p><p>') # old version
-    processed_description = re.sub(r'(\\n|\r|<br>|<BR>)', '</p><p>', description)
+    processed_description = re.sub(r'(\\n|<br>|<BR>)', '</p><p>', description)
     
     # Build entry
     entry_html = indent_str + f'''        <idx:entry name="word" scriptable="yes">
@@ -441,7 +410,8 @@ def create_dictionary_files(dictionary_instance):
     logger = logging.getLogger(__name__)
     try:
         # Get source file content
-        content = read_file_preserving_cr(dictionary_instance.source_file.path)
+        with open(dictionary_instance.source_file.path, 'r', encoding='utf-8') as f:
+            content = f.read()
         
         # Create a temporary working directory
         with tempfile.TemporaryDirectory() as temp_dir:
