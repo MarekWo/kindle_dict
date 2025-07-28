@@ -18,7 +18,7 @@ services:
     env_file: .env
     environment:
       - DJANGO_SETTINGS_MODULE=kindle_dict.settings.dev
-    restart: on-failure
+    restart: no
     command: >
       bash -c "python manage.py migrate &&
                python manage.py runserver 0.0.0.0:8000 --noreload"
