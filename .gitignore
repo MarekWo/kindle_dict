@@ -79,3 +79,6 @@ Desktop.ini
 
 # batch files
 start_process_kindlegen_jobs.bat
+
+# AI base prompt
+DJANGO_PROJECT_TEMPLATE_PROMPT.md
