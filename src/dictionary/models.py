@@ -5,6 +5,7 @@ Models for the Dictionary app.
 """
 
 import os
+import re
 import uuid
 from django.contrib.auth import get_user_model
 # kindle_dict\src\dictionary\models.py
@@ -23,11 +24,26 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
 
+
+_RESERVED_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def safe_filename_part(name):
+    """Return a version of ``name`` safe to use as a file/directory name.
+
+    Replaces characters reserved on Windows (NTFS) and problematic for Wine's
+    path translation (notably ``"``) with ``_``. Trailing dots/spaces are also
+    stripped because Windows silently drops them.
+    """
+    sanitized = _RESERVED_FILENAME_CHARS.sub('_', name).rstrip('. ')
+    return sanitized or '_'
+
+
 def dictionary_file_path(instance, filename):
     """Generate file path for dictionary files"""
     # Generate a path based on dictionary name and file type
     ext = filename.split('.')[-1]
-    filename = f"{instance.name}.{ext}"
+    filename = f"{safe_filename_part(instance.name)}.{ext}"
     return os.path.join('dictionaries', str(instance.id), filename)
 
 class Dictionary(models.Model):

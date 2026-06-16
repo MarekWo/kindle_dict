@@ -442,7 +442,14 @@ def create_dictionary_files(dictionary_instance):
     try:
         # Get source file content
         content = read_file_preserving_cr(dictionary_instance.source_file.path)
-        
+
+        # The dictionary's display name may contain characters that are reserved
+        # on Windows / break Wine's path translation (e.g. ``"``). Derive a
+        # filesystem-safe base name for every file we generate and for the
+        # kindlegen job directory.
+        from .models import safe_filename_part
+        base_filename = safe_filename_part(dictionary_instance.name)
+
         # Create a temporary working directory
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set up language info
@@ -455,28 +462,28 @@ def create_dictionary_files(dictionary_instance):
                 'dictionary_in_language': 'pl',  # Default, could be customized later
                 'dictionary_out_language': 'pl',  # Default, could be customized later
             }
-            
+
             # Add original build date if this is an update
             if dictionary_instance.created_at:
                 language_info['original_build_date'] = dictionary_instance.created_at.isoformat()
                 logger.info(f"Using original build date from model: {language_info['original_build_date']}")
-            
+
             # Process dictionary content
             file_paths = process_dictionary_content(
-                content, 
-                dictionary_instance.name, 
-                temp_dir, 
+                content,
+                base_filename,
+                temp_dir,
                 language_info,
                 dictionary_instance.build_version
             )
-            
+
             # Generate MOBI file
             mobi_path = run_kindlegen(file_paths['opf'])
             if mobi_path and os.path.exists(mobi_path):
                 file_paths['mobi'] = mobi_path
-            
+
             # Teraz tworzymy plik ZIP, który będzie zawierał również plik MOBI
-            zip_path = os.path.join(temp_dir, f"{dictionary_instance.name}.zip")
+            zip_path = os.path.join(temp_dir, f"{base_filename}.zip")
             with zipfile.ZipFile(zip_path, 'w') as zipf:
                 for file_key, file_path in file_paths.items():
                     if os.path.exists(file_path):
