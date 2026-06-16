@@ -84,7 +84,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = env('LANGUAGE_CODE', default='pl')
 TIME_ZONE = env('TIME_ZONE', default='Europe/Warsaw')
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
