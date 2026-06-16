@@ -72,7 +72,10 @@
                                         
                                         {% if user.is_authenticated %}
                                         <li class="nav-item">
-                                            <a class="nav-link" href="{% url 'logout' %}">Wyloguj się ({{ user.username }})</a>
+                                            <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="nav-link btn btn-link p-0 border-0 align-baseline" style="text-decoration: none;">Wyloguj się ({{ user.username }})</button>
+                                            </form>
                                         </li>
                                         {% else %}
                                         <li class="nav-item">
