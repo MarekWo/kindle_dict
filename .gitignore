@@ -82,3 +82,6 @@ start_process_kindlegen_jobs.bat
 
 # AI base prompt
 DJANGO_PROJECT_TEMPLATE_PROMPT.md
+
+# Claude Code project-local instructions (contains prod access details)
+.claude/
