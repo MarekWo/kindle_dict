@@ -9,10 +9,23 @@ import logging
 from django.db.models.signals import post_delete, pre_save, post_save
 from django.dispatch import receiver
 from django.conf import settings
-from .models import Dictionary, DictionarySuggestion, Task
+from django.contrib.auth import get_user_model
+from .models import Dictionary, DictionarySuggestion, Task, UserSettings
 from .email_utils import send_dictionary_completion_email, send_task_notification
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=get_user_model())
+def ensure_user_settings(sender, instance, created, **kwargs):
+    """Create a UserSettings row whenever a new User is created.
+
+    Eliminates the lazy `UserSettings.get_for_user` pattern for new
+    accounts and gives downstream code (registration flow, profile,
+    email-2FA) a guaranteed-present settings row to read/write.
+    """
+    if created:
+        UserSettings.objects.get_or_create(user=instance)
 
 @receiver(post_delete, sender=Dictionary)
 def auto_delete_files_on_delete(sender, instance, **kwargs):

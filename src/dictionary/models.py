@@ -308,6 +308,10 @@ class CaptchaConfiguration(models.Model):
         default=True,
         verbose_name=_("Włącz dla formularza propozycji słownika")
     )
+    enable_register = models.BooleanField(
+        default=True,
+        verbose_name=_("Włącz dla formularza rejestracji")
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Utworzono")
@@ -316,7 +320,7 @@ class CaptchaConfiguration(models.Model):
         auto_now=True,
         verbose_name=_("Zaktualizowano")
     )
-    
+
     class Meta:
         verbose_name = _("Konfiguracja CAPTCHA")
         verbose_name_plural = _("Konfiguracje CAPTCHA")
@@ -664,7 +668,45 @@ class UserSettings(models.Model):
         verbose_name=_("Powiadomienia o nowych zadaniach"),
         help_text=_("Otrzymuj powiadomienia email o nowych zadaniach i zmianach statusu zadań.")
     )
-    
+
+    # Rejestracja: stan weryfikacji emaila i akceptacji przez administratora
+    email_verified = models.BooleanField(
+        default=False,
+        verbose_name=_("Email zweryfikowany"),
+        help_text=_("Czy użytkownik kliknął link aktywacyjny wysłany na podany adres e-mail.")
+    )
+    email_verification_token = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        verbose_name=_("Token weryfikacji emaila")
+    )
+    email_verification_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Wysłano weryfikację emaila")
+    )
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Data akceptacji konta")
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_users',
+        verbose_name=_("Zaakceptowane przez")
+    )
+
+    # Email-based 2FA: opt-in toggle per użytkownik
+    two_factor_enabled = models.BooleanField(
+        default=False,
+        verbose_name=_("Email-2FA włączone"),
+        help_text=_("Czy przy każdym logowaniu wymagać dodatkowego kodu wysyłanego e-mailem.")
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Data utworzenia")
