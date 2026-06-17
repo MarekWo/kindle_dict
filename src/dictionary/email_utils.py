@@ -613,12 +613,8 @@ def send_registration_verification_email(user, verify_url):
     return send_email(user.email, subject, html_content)
 
 
-def send_admin_approval_notification(user):
-    """Notify staff that a freshly verified user is waiting for approval.
-
-    Sent after the user clicks the verification link. Goes to every active
-    superuser and every active member of the `Dictionary Admin` group.
-    """
+def _admin_recipient_emails():
+    """Return the set of active superuser + 'Dictionary Admin' emails."""
     UserModel = get_user_model()
     recipients = set(
         UserModel.objects.filter(is_superuser=True, is_active=True, email__gt='')
@@ -632,6 +628,16 @@ def send_admin_approval_notification(user):
         )
     except Group.DoesNotExist:
         pass
+    return recipients
+
+
+def send_admin_approval_notification(user, approval_url=None):
+    """Notify staff that a freshly verified user is waiting for approval.
+
+    Sent after the user clicks the verification link. Goes to every active
+    superuser and every active member of the `Dictionary Admin` group.
+    """
+    recipients = _admin_recipient_emails()
 
     if not recipients:
         logger.warning(
@@ -642,6 +648,10 @@ def send_admin_approval_notification(user):
 
     full_name = (user.get_full_name() or '').strip()
     subject = f"Nowa rejestracja oczekuje na akceptację: {user.username}"
+    approval_block = (
+        f'<p><a href="{approval_url}">{approval_url}</a></p>'
+        if approval_url else ''
+    )
     html_content = f"""
     <p>Nowy użytkownik potwierdził swój adres e-mail i czeka na akceptację konta:</p>
     <ul>
@@ -649,10 +659,10 @@ def send_admin_approval_notification(user):
         <li><strong>Imię i nazwisko:</strong> {full_name or '(nie podano)'}</li>
         <li><strong>Adres e-mail:</strong> {user.email}</li>
     </ul>
-    <p>Możesz zaakceptować lub odrzucić konto w panelu administracyjnym Django
-    (sekcja <em>Użytkownicy</em>) — wystarczy ustawić pole <em>Active</em>
-    na <code>True</code> i, jeśli to potrzebne, przypisać użytkownika do grup
-    (Dictionary Creator/Edit/Admin).</p>
+    <p>Otwórz panel administracyjny, aby zatwierdzić lub odrzucić konto
+    i opcjonalnie przypisać użytkownika do grup
+    (Dictionary Creator/Edit/Admin):</p>
+    {approval_block}
     <p>Pozdrawiamy,<br>System Kindle Dictionary Creator</p>
     """
     sent_any = False
@@ -660,3 +670,64 @@ def send_admin_approval_notification(user):
         if send_email(recipient, subject, html_content):
             sent_any = True
     return sent_any
+
+
+def send_account_approved_email(user, login_url=None):
+    """Notify a user that their account has been activated."""
+    display_name = (user.get_full_name() or user.username).strip()
+    granted_groups = list(user.groups.values_list('name', flat=True))
+
+    if granted_groups:
+        groups_html = ''.join(f'<li>{name}</li>' for name in granted_groups)
+        groups_block = f"<p>Otrzymałeś następujące role:</p><ul>{groups_html}</ul>"
+    else:
+        groups_block = (
+            "<p>Konto nie zostało przypisane do żadnej dedykowanej roli — "
+            "możesz korzystać z serwisu jak zalogowany użytkownik "
+            "(propozycje słowników, kontakt). Jeśli potrzebujesz wyższych "
+            "uprawnień, skontaktuj się z administratorem.</p>"
+        )
+
+    login_block = (
+        f'<p>Aby się zalogować, wejdź na: <a href="{login_url}">{login_url}</a></p>'
+        if login_url else ''
+    )
+
+    subject = "Twoje konto zostało aktywowane — Biblioteka Słowników Kindle"
+    html_content = f"""
+    <p>Witaj {display_name},</p>
+    <p>Administrator zatwierdził Twoje konto <strong>{user.username}</strong>
+    w serwisie <strong>Biblioteka Słowników Kindle</strong>. Możesz się teraz
+    zalogować przy użyciu hasła podanego przy rejestracji.</p>
+    {groups_block}
+    {login_block}
+    <p>Pozdrawiamy,<br>System Kindle Dictionary Creator</p>
+    """
+    return send_email(user.email, subject, html_content)
+
+
+def send_account_rejected_email(email, username, reason=''):
+    """Notify a user that their account request was rejected.
+
+    Called *before* the User row is deleted, so we accept raw email +
+    username instead of a User instance.
+    """
+    if not email:
+        return False
+    reason_block = (
+        f'<p><strong>Powód:</strong></p>'
+        f'<div style="padding: 10px; border-left: 4px solid #ccc; margin-left: 20px;">{reason}</div>'
+        if reason else ''
+    )
+    subject = "Twoje konto nie zostało zaakceptowane — Biblioteka Słowników Kindle"
+    html_content = f"""
+    <p>Witaj,</p>
+    <p>Z przykrością informujemy, że Twoje zgłoszenie rejestracji konta
+    <strong>{username}</strong> w serwisie <strong>Biblioteka Słowników
+    Kindle</strong> nie zostało zaakceptowane przez administratora.</p>
+    {reason_block}
+    <p>Jeśli uważasz, że to pomyłka lub chcesz przedyskutować decyzję,
+    napisz do nas przez formularz kontaktowy dostępny na stronie głównej.</p>
+    <p>Pozdrawiamy,<br>System Kindle Dictionary Creator</p>
+    """
+    return send_email(email, subject, html_content)

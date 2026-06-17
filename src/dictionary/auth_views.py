@@ -152,7 +152,10 @@ class EmailVerificationView(View):
                 'email_verification_token',
                 'updated_at',
             ])
-            send_admin_approval_notification(settings_row.user)
+            approval_url = request.build_absolute_uri(
+                reverse('dictionary:user_approval_detail', kwargs={'pk': settings_row.user.pk})
+            )
+            send_admin_approval_notification(settings_row.user, approval_url=approval_url)
             logger.info(
                 "Email verified for user %s (id=%s); awaiting admin approval",
                 settings_row.user.username, settings_row.user.id,

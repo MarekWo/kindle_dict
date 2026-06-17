@@ -8,8 +8,12 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import Group
 from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task
 from django.core.validators import FileExtensionValidator
+
+
+APPROVABLE_GROUP_NAMES = ['Dictionary Creator', 'Dictionary Edit', 'Dictionary Admin']
 
 class DictionaryForm(forms.ModelForm):
     """Form for uploading a new dictionary"""
@@ -482,3 +486,32 @@ class UserRegistrationForm(UserCreationForm):
         if email and get_user_model().objects.filter(email__iexact=email).exists():
             raise forms.ValidationError(_("Konto z tym adresem e-mail już istnieje."))
         return email
+
+
+class UserApprovalForm(forms.Form):
+    """Pick which app groups a freshly verified user should land in."""
+
+    groups = forms.ModelMultipleChoiceField(
+        queryset=Group.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label=_("Przyznane role"),
+        help_text=_("Bez zaznaczenia żadnej roli użytkownik zalogowany ma dostęp tylko do propozycji słowników i kontaktu (jak anonim)."),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['groups'].queryset = Group.objects.filter(
+            name__in=APPROVABLE_GROUP_NAMES
+        ).order_by('name')
+
+
+class UserRejectionForm(forms.Form):
+    """Optional rejection reason — included in the rejection email."""
+
+    rejection_reason = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        label=_("Powód odrzucenia (opcjonalnie)"),
+        help_text=_("Treść zostanie dołączona do e-maila informującego użytkownika o odrzuceniu konta."),
+    )

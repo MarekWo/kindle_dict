@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/dictionary/admin/pending_users.html {% endcomment %}
+{% load i18n %}
+{% block title %}Oczekujący na akceptację - Kreator Słownika Kindle{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4">Oczekujący na akceptację</h1>
+
+    {% if pending_users %}
+        <p class="text-muted">
+            Lista użytkowników, którzy potwierdzili adres e-mail po rejestracji
+            i czekają na decyzję administratora.
+        </p>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Login</th>
+                        <th>Imię i nazwisko</th>
+                        <th>Adres e-mail</th>
+                        <th>Rejestracja</th>
+                        <th class="text-end">Akcja</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in pending_users %}
+                        <tr>
+                            <td>{{ u.username }}</td>
+                            <td>{{ u.get_full_name|default:'—' }}</td>
+                            <td>{{ u.email }}</td>
+                            <td>
+                                {% if u.settings.email_verification_sent_at %}
+                                    {{ u.settings.email_verification_sent_at|date:"Y-m-d H:i" }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'dictionary:user_approval_detail' pk=u.pk %}" class="btn btn-sm btn-primary">
+                                    Szczegóły
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Nie ma teraz żadnych kont oczekujących na akceptację.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

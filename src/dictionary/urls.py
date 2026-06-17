@@ -38,6 +38,10 @@ path('tasks/update-dictionary/<uuid:pk>/', views.task_update_dictionary, name='t
     path('config/smtp/test/', views.test_smtp_email, name='test_smtp_email'),
     path('config/captcha/', views.CaptchaConfigurationView.as_view(), name='captcha_config'),
     path('config/user-settings/', views.UserSettingsView.as_view(), name='user_settings'),
+
+    # User registration approval panel (admin / superuser)
+    path('admin/users/pending/', views.PendingUserListView.as_view(), name='pending_users'),
+    path('admin/users/<int:pk>/', views.UserApprovalDetailView.as_view(), name='user_approval_detail'),
     
     # Contact form
     path('contact/', views.ContactMessageCreateView.as_view(), name='contact'),

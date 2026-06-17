@@ -20,6 +20,17 @@ def get_new_tasks_count():
     from dictionary.models import Task
     return Task.objects.filter(status='new').count()
 
+
+@register.simple_tag
+def get_pending_users_count():
+    """
+    Zwraca liczbę użytkowników oczekujących na akceptację administratora.
+    Użycie: {% get_pending_users_count %}
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    return User.objects.filter(is_active=False, settings__email_verified=True).count()
+
 @register.filter(name='can_manage_tasks')
 def can_manage_tasks(user):
     """

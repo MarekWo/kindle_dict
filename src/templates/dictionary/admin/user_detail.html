@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/dictionary/admin/user_detail.html {% endcomment %}
+{% load i18n %}
+{% block title %}{{ pending_user.username }} — akceptacja konta{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <p>
+        <a href="{% url 'dictionary:pending_users' %}">&larr; Wróć do listy oczekujących</a>
+    </p>
+
+    <h1 class="mb-4">Akceptacja konta: {{ pending_user.username }}</h1>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Dane konta</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Login:</strong> {{ pending_user.username }}</li>
+                    <li class="list-group-item"><strong>Imię i nazwisko:</strong> {{ pending_user.get_full_name|default:'—' }}</li>
+                    <li class="list-group-item"><strong>Adres e-mail:</strong> {{ pending_user.email }}</li>
+                    <li class="list-group-item">
+                        <strong>E-mail zweryfikowany:</strong>
+                        {% if settings_row and settings_row.email_verified %}
+                            <span class="badge bg-success">Tak</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Nie</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Konto aktywne:</strong>
+                        {% if pending_user.is_active %}
+                            <span class="badge bg-success">Tak</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Nie (oczekuje)</span>
+                        {% endif %}
+                    </li>
+                    {% if settings_row and settings_row.email_verification_sent_at %}
+                        <li class="list-group-item">
+                            <strong>Data rejestracji:</strong>
+                            {{ settings_row.email_verification_sent_at|date:"Y-m-d H:i" }}
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success-subtle">
+                    <h5 class="mb-0">Zaakceptuj konto</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_user.is_active %}
+                        <div class="alert alert-info mb-0">To konto jest już aktywne.</div>
+                    {% else %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="approve">
+
+                            <div class="mb-3">
+                                <label class="form-label">{{ approval_form.groups.label }}</label>
+                                {% for choice in approval_form.groups %}
+                                    <div class="form-check">
+                                        {{ choice.tag }}
+                                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                            {{ choice.choice_label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                                {% if approval_form.groups.help_text %}
+                                    <div class="form-text">{{ approval_form.groups.help_text }}</div>
+                                {% endif %}
+                                {% if approval_form.groups.errors %}
+                                    <div class="invalid-feedback d-block">{{ approval_form.groups.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <button type="submit" class="btn btn-success">Zatwierdź konto</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-danger-subtle">
+                    <h5 class="mb-0">Odrzuć konto</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_user.is_active %}
+                        <div class="alert alert-info mb-0">
+                            Nie można odrzucić aktywnego konta z tego widoku.
+                            Aby je dezaktywować, użyj panelu Django admin.
+                        </div>
+                    {% else %}
+                        <form method="post" onsubmit="return confirm('Na pewno usunąć to konto? Tej operacji nie można cofnąć.');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reject">
+
+                            <div class="mb-3">
+                                <label for="{{ rejection_form.rejection_reason.id_for_label }}" class="form-label">
+                                    {{ rejection_form.rejection_reason.label }}
+                                </label>
+                                {{ rejection_form.rejection_reason }}
+                                {% if rejection_form.rejection_reason.help_text %}
+                                    <div class="form-text">{{ rejection_form.rejection_reason.help_text }}</div>
+                                {% endif %}
+                                {% if rejection_form.rejection_reason.errors %}
+                                    <div class="invalid-feedback d-block">{{ rejection_form.rejection_reason.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <button type="submit" class="btn btn-danger">Odrzuć i usuń konto</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

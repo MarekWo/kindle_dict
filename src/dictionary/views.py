@@ -22,19 +22,28 @@ from django.utils import timezone
 from django.conf import settings
 from django.db.models import Count, Q
 
+from django.contrib.auth import get_user_model
 from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task, UserSettings
 from .forms import (
-    DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm, 
+    DictionaryForm, DictionarySuggestionForm, SMTPConfigurationForm, DictionaryUpdateForm,
     ContactMessageForm, CaptchaConfigurationForm, TaskForm, TaskStatusForm, DictionaryChangeForm,
-    UserSettingsForm
+    UserSettingsForm, UserApprovalForm, UserRejectionForm
 )
 from .tasks import process_dictionary
 import difflib
 from .email_utils import (
     send_test_email, send_contact_message_notification, send_task_notification,
-    send_task_status_notification_to_submitter
+    send_task_status_notification_to_submitter,
+    send_account_approved_email, send_account_rejected_email,
 )
 from .captcha_utils import verify_captcha_response, get_captcha_context, is_captcha_enabled
+
+
+def is_user_admin(user):
+    """True for superusers and members of the 'Dictionary Admin' group."""
+    return user.is_authenticated and (
+        user.is_superuser or user.groups.filter(name='Dictionary Admin').exists()
+    )
 
 class DictionaryListView(ListView):
     """View to display a list of dictionaries"""
@@ -1195,3 +1204,102 @@ def toggle_dictionary_public(request, pk):
     
     # Redirect back to the dictionary detail page
     return redirect('dictionary:detail', pk=pk)
+
+
+class PendingUserListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """List users who confirmed their email and are waiting for approval."""
+
+    template_name = 'dictionary/admin/pending_users.html'
+    context_object_name = 'pending_users'
+
+    def test_func(self):
+        return is_user_admin(self.request.user)
+
+    def get_queryset(self):
+        User = get_user_model()
+        return (
+            User.objects
+            .filter(is_active=False, settings__email_verified=True)
+            .select_related('settings')
+            .order_by('settings__email_verification_sent_at')
+        )
+
+
+class UserApprovalDetailView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Show details of a pending user and process approve / reject."""
+
+    template_name = 'dictionary/admin/user_detail.html'
+
+    def test_func(self):
+        return is_user_admin(self.request.user)
+
+    def get_user(self, pk):
+        User = get_user_model()
+        return get_object_or_404(User, pk=pk)
+
+    def get_context(self, user, approval_form=None, rejection_form=None):
+        return {
+            'pending_user': user,
+            'settings_row': UserSettings.objects.filter(user=user).first(),
+            'approval_form': approval_form or UserApprovalForm(),
+            'rejection_form': rejection_form or UserRejectionForm(),
+        }
+
+    def get(self, request, pk):
+        user = self.get_user(pk)
+        return render(request, self.template_name, self.get_context(user))
+
+    def post(self, request, pk):
+        user = self.get_user(pk)
+        action = request.POST.get('action')
+
+        if action == 'approve':
+            approval_form = UserApprovalForm(request.POST)
+            if not approval_form.is_valid():
+                return render(request, self.template_name,
+                              self.get_context(user, approval_form=approval_form))
+            if user.is_active:
+                messages.info(request, _("To konto jest już aktywne."))
+                return redirect('dictionary:pending_users')
+            user.is_active = True
+            user.save(update_fields=['is_active'])
+            user.groups.set(approval_form.cleaned_data['groups'])
+
+            settings_row, _created = UserSettings.objects.get_or_create(user=user)
+            settings_row.approved_at = timezone.now()
+            settings_row.approved_by = request.user
+            settings_row.save(update_fields=['approved_at', 'approved_by', 'updated_at'])
+
+            login_url = request.build_absolute_uri(reverse_lazy('login'))
+            send_account_approved_email(user, login_url=login_url)
+            messages.success(
+                request,
+                _("Konto użytkownika %(username)s zostało aktywowane.") % {'username': user.username}
+            )
+            return redirect('dictionary:pending_users')
+
+        if action == 'reject':
+            rejection_form = UserRejectionForm(request.POST)
+            if not rejection_form.is_valid():
+                return render(request, self.template_name,
+                              self.get_context(user, rejection_form=rejection_form))
+            if user.is_active:
+                messages.error(
+                    request,
+                    _("To konto jest już aktywne — nie można go odrzucić tym przepływem. "
+                      "Wyłącz pole „Active” w panelu admina, jeśli chcesz je dezaktywować.")
+                )
+                return redirect('dictionary:pending_users')
+            email = user.email
+            username = user.username
+            reason = rejection_form.cleaned_data.get('rejection_reason', '')
+            user.delete()
+            send_account_rejected_email(email, username, reason=reason)
+            messages.success(
+                request,
+                _("Konto użytkownika %(username)s zostało odrzucone i usunięte.") % {'username': username}
+            )
+            return redirect('dictionary:pending_users')
+
+        messages.error(request, _("Nieznana akcja."))
+        return redirect('dictionary:user_approval_detail', pk=pk)
