@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/auth/email_verified.html {% endcomment %}
+{% block title %}E-mail zweryfikowany - Kreator Słownika Kindle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row my-5">
+        <div class="col-lg-6 mx-auto text-center">
+            <div class="card">
+                <div class="card-body p-4">
+                    <h3 class="mb-3">Dziękujemy za potwierdzenie adresu e-mail!</h3>
+                    <p>
+                        Twoje konto <strong>{{ user.username }}</strong> czeka teraz
+                        na akceptację administratora.
+                    </p>
+                    <p>
+                        Gdy administrator zatwierdzi rejestrację, otrzymasz osobnego
+                        e-maila z potwierdzeniem aktywacji i będziesz mógł się
+                        zalogować.
+                    </p>
+                    <a href="{% url 'home' %}" class="btn btn-primary mt-3">Wróć na stronę główną</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -19,23 +19,23 @@ def get_captcha_config():
 def is_captcha_enabled(form_type=None):
     """
     Check if CAPTCHA is enabled globally or for a specific form type
-    
+
     Args:
-        form_type (str, optional): The form type to check ('login', 'contact', 'suggest')
-        
+        form_type (str, optional): The form type to check ('login', 'contact', 'suggest', 'register')
+
     Returns:
         bool: True if CAPTCHA is enabled, False otherwise
     """
     config = get_captcha_config()
-    
+
     # If no configuration exists or CAPTCHA is globally disabled, return False
     if not config or not config.is_enabled:
         return False
-    
+
     # If no specific form type is provided, return the global setting
     if not form_type:
         return config.is_enabled
-    
+
     # Check if CAPTCHA is enabled for the specific form type
     if form_type == 'login':
         return config.enable_login
@@ -43,7 +43,9 @@ def is_captcha_enabled(form_type=None):
         return config.enable_contact
     elif form_type == 'suggest':
         return config.enable_suggest
-    
+    elif form_type == 'register':
+        return config.enable_register
+
     # Default to global setting if form type is not recognized
     return config.is_enabled
 

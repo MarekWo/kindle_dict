@@ -6,6 +6,8 @@ Forms for the Dictionary app.
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import UserCreationForm
 from .models import Dictionary, DictionarySuggestion, SMTPConfiguration, ContactMessage, CaptchaConfiguration, Task
 from django.core.validators import FileExtensionValidator
 
@@ -433,7 +435,7 @@ class DictionaryChangeForm(forms.Form):
 
 class UserSettingsForm(forms.ModelForm):
     """Form for user settings"""
-    
+
     class Meta:
         from .models import UserSettings
         model = UserSettings
@@ -442,3 +444,41 @@ class UserSettingsForm(forms.ModelForm):
             'email_dictionary_notifications': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'email_task_notifications': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+
+class UserRegistrationForm(UserCreationForm):
+    """Self-registration form. Extends Django's UserCreationForm with
+    required first_name/last_name/email and email uniqueness validation."""
+
+    first_name = forms.CharField(
+        max_length=150,
+        required=True,
+        label=_("Imię"),
+    )
+    last_name = forms.CharField(
+        max_length=150,
+        required=True,
+        label=_("Nazwisko"),
+    )
+    email = forms.EmailField(
+        required=True,
+        label=_("Adres e-mail"),
+        help_text=_("Na ten adres wyślemy link aktywacyjny."),
+    )
+
+    class Meta:
+        model = get_user_model()
+        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            css_class = 'form-check-input' if isinstance(field.widget, forms.CheckboxInput) else 'form-control'
+            existing = field.widget.attrs.get('class', '')
+            field.widget.attrs['class'] = (existing + ' ' + css_class).strip()
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip()
+        if email and get_user_model().objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(_("Konto z tym adresem e-mail już istnieje."))
+        return email

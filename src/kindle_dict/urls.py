@@ -10,16 +10,26 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
-from dictionary.auth_views import CaptchaLoginView
+from dictionary.auth_views import (
+    CaptchaLoginView,
+    RegisterView,
+    RegistrationDoneView,
+    EmailVerificationView,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
     path('dictionary/', include('dictionary.urls')),
-    
+
     # Ścieżki do logowania i wylogowania
     path('login/', CaptchaLoginView.as_view(next_page='/'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+
+    # Rejestracja + weryfikacja e-maila
+    path('accounts/register/', RegisterView.as_view(), name='register'),
+    path('accounts/registration-done/', RegistrationDoneView.as_view(), name='registration_done'),
+    path('accounts/verify-email/<str:token>/', EmailVerificationView.as_view(), name='verify_email'),
 ]
 
 # Serve media files in development

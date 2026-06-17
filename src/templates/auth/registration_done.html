@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/auth/registration_done.html {% endcomment %}
+{% block title %}Sprawdź skrzynkę e-mail - Kreator Słownika Kindle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row my-5">
+        <div class="col-lg-6 mx-auto text-center">
+            <div class="card">
+                <div class="card-body p-4">
+                    <h3 class="mb-3">Sprawdź swoją skrzynkę e-mail</h3>
+                    <p>
+                        Wysłaliśmy do Ciebie wiadomość z linkiem aktywacyjnym.
+                        Kliknij w link w wiadomości, aby potwierdzić swój adres e-mail.
+                    </p>
+                    <p>
+                        Po potwierdzeniu adresu Twoje konto trafi do akceptacji
+                        administratora. O aktywacji powiadomimy Cię osobnym e-mailem.
+                    </p>
+                    <p class="text-muted small mt-4">
+                        Link aktywacyjny jest ważny przez 48 godzin.
+                        Jeśli wiadomość nie dotarła, sprawdź folder „Spam".
+                    </p>
+                    <a href="{% url 'home' %}" class="btn btn-primary mt-3">Wróć na stronę główną</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

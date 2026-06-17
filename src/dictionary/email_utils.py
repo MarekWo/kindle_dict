@@ -574,14 +574,14 @@ def get_status_additional_info(task):
         """
     elif task.status == 'accepted':
         return """
-        <p>Twoje zgłoszenie zostało zaakceptowane i oczekuje na realizację. 
+        <p>Twoje zgłoszenie zostało zaakceptowane i oczekuje na realizację.
         Zostaniesz powiadomiony, gdy słownik zostanie utworzony.</p>
         """
     elif task.status == 'completed':
         if task.related_dictionary:
             return """
             <p>Twoje zgłoszenie zostało zrealizowane! Słownik jest już dostępny do pobrania.</p>
-            <p>Możesz pobrać słownik z naszej strony: 
+            <p>Możesz pobrać słownik z naszej strony:
             <a href="{site_url}/dictionary/{dictionary_id}/">Pobierz słownik</a></p>
             """.format(
                 site_url=settings.SITE_URL,
@@ -593,3 +593,70 @@ def get_status_additional_info(task):
             """
     else:
         return ""
+
+
+def send_registration_verification_email(user, verify_url):
+    """Email sent to a new self-registered user with the confirmation link."""
+    display_name = (user.get_full_name() or user.username).strip()
+    subject = "Aktywacja konta w Bibliotece Słowników Kindle"
+    html_content = f"""
+    <p>Witaj {display_name},</p>
+    <p>Dziękujemy za rejestrację w serwisie <strong>Biblioteka Słowników Kindle</strong>.</p>
+    <p>Aby potwierdzić swój adres e-mail i przekazać konto do akceptacji administratora,
+    kliknij w poniższy link:</p>
+    <p><a href="{verify_url}">{verify_url}</a></p>
+    <p>Link jest ważny przez 48 godzin. Po potwierdzeniu adresu e-mail administrator
+    zweryfikuje konto. O aktywacji zostaniesz powiadomiony osobnym e-mailem.</p>
+    <p>Jeśli to nie Ty zakładałeś konto, po prostu zignoruj tę wiadomość.</p>
+    <p>Pozdrawiamy,<br>System Kindle Dictionary Creator</p>
+    """
+    return send_email(user.email, subject, html_content)
+
+
+def send_admin_approval_notification(user):
+    """Notify staff that a freshly verified user is waiting for approval.
+
+    Sent after the user clicks the verification link. Goes to every active
+    superuser and every active member of the `Dictionary Admin` group.
+    """
+    UserModel = get_user_model()
+    recipients = set(
+        UserModel.objects.filter(is_superuser=True, is_active=True, email__gt='')
+        .values_list('email', flat=True)
+    )
+    try:
+        admin_group = Group.objects.get(name='Dictionary Admin')
+        recipients.update(
+            admin_group.user_set.filter(is_active=True, email__gt='')
+            .values_list('email', flat=True)
+        )
+    except Group.DoesNotExist:
+        pass
+
+    if not recipients:
+        logger.warning(
+            "No admin recipients for approval notification of user %s",
+            user.username,
+        )
+        return False
+
+    full_name = (user.get_full_name() or '').strip()
+    subject = f"Nowa rejestracja oczekuje na akceptację: {user.username}"
+    html_content = f"""
+    <p>Nowy użytkownik potwierdził swój adres e-mail i czeka na akceptację konta:</p>
+    <ul>
+        <li><strong>Login:</strong> {user.username}</li>
+        <li><strong>Imię i nazwisko:</strong> {full_name or '(nie podano)'}</li>
+        <li><strong>Adres e-mail:</strong> {user.email}</li>
+    </ul>
+    <p>Możesz zaakceptować lub odrzucić konto w panelu administracyjnym Django
+    (sekcja <em>Użytkownicy</em>) — wystarczy ustawić pole <em>Active</em>
+    na <code>True</code> i, jeśli to potrzebne, przypisać użytkownika do grup
+    (Dictionary Creator/Edit/Admin).</p>
+    <p>Pozdrawiamy,<br>System Kindle Dictionary Creator</p>
+    """
+    sent_any = False
+    for recipient in recipients:
+        if send_email(recipient, subject, html_content):
+            sent_any = True
+    return sent_any

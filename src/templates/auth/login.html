@@ -32,11 +32,17 @@
                         </div>
                         
                         {% include 'includes/captcha.html' %}
-                        
+
                         <button type="submit" class="btn btn-primary">Zaloguj się</button>
-                        
+
                         <input type="hidden" name="next" value="{{ next }}">
                     </form>
+
+                    <hr class="my-4">
+                    <p class="text-center mb-0">
+                        Nie masz jeszcze konta?
+                        <a href="{% url 'register' %}">Zarejestruj się</a>.
+                    </p>
                 </div>
             </div>
         </div>

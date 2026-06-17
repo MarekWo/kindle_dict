@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/auth/email_verification_failed.html {% endcomment %}
+{% block title %}Weryfikacja nie powiodła się - Kreator Słownika Kindle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row my-5">
+        <div class="col-lg-6 mx-auto text-center">
+            <div class="card">
+                <div class="card-body p-4">
+                    <h3 class="mb-3">Nie udało się zweryfikować adresu e-mail</h3>
+                    {% if reason == 'expired' %}
+                        <p>
+                            Link aktywacyjny stracił ważność (ważny jest przez 48
+                            godzin od wysłania). Zarejestruj się ponownie, aby
+                            otrzymać nowy link.
+                        </p>
+                    {% else %}
+                        <p>
+                            Ten link aktywacyjny jest nieprawidłowy lub został już
+                            użyty. Jeśli właśnie założyłeś konto i kliknąłeś link
+                            kilkukrotnie, sprawdź, czy nie jesteś już zalogowany —
+                            może wystarczy poczekać na akceptację administratora.
+                        </p>
+                    {% endif %}
+                    <a href="{% url 'register' %}" class="btn btn-primary mt-3">Zarejestruj się ponownie</a>
+                    <a href="{% url 'home' %}" class="btn btn-link mt-3">Strona główna</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
