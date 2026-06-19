@@ -5,7 +5,7 @@ URL configuration for kindle_dict project.
 """
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, reverse_lazy
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
@@ -15,6 +15,7 @@ from dictionary.auth_views import (
     RegisterView,
     RegistrationDoneView,
     EmailVerificationView,
+    ProfileEditView,
 )
 
 urlpatterns = [
@@ -30,6 +31,16 @@ urlpatterns = [
     path('accounts/register/', RegisterView.as_view(), name='register'),
     path('accounts/registration-done/', RegistrationDoneView.as_view(), name='registration_done'),
     path('accounts/verify-email/<str:token>/', EmailVerificationView.as_view(), name='verify_email'),
+
+    # Zarządzanie własnym kontem
+    path('accounts/profile/', ProfileEditView.as_view(), name='profile'),
+    path('accounts/password_change/', auth_views.PasswordChangeView.as_view(
+        template_name='auth/password_change_form.html',
+        success_url=reverse_lazy('password_change_done'),
+    ), name='password_change'),
+    path('accounts/password_change/done/', auth_views.PasswordChangeDoneView.as_view(
+        template_name='auth/password_change_done.html',
+    ), name='password_change_done'),
 ]
 
 # Serve media files in development

@@ -71,28 +71,32 @@
                         <ul class="dropdown-menu" aria-labelledby="configDropdown">
                             <li><a class="dropdown-item" href="{% url 'dictionary:smtp_config' %}">Konfiguracja SMTP</a></li>
                             <li><a class="dropdown-item" href="{% url 'dictionary:captcha_config' %}">Konfiguracja CAPTCHA</a></li>
-                            <li><a class="dropdown-item" href="{% url 'dictionary:user_settings' %}">Ustawienia użytkownika</a></li>
                         </ul>
                     </li>
                     {% endif %}
-                                        {% if user.is_authenticated and not user.is_superuser %}
-                                        <li class="nav-item">
-                                            <a class="nav-link" href="{% url 'dictionary:user_settings' %}">Ustawienia</a>
-                                        </li>
-                                        {% endif %}
-                                        
-                                        {% if user.is_authenticated %}
-                                        <li class="nav-item">
-                                            <form method="post" action="{% url 'logout' %}" class="m-0">
-                                                {% csrf_token %}
-                                                <button type="submit" class="nav-link" style="background:none; border:0; cursor:pointer;">Wyloguj się ({{ user.username }})</button>
-                                            </form>
-                                        </li>
-                                        {% else %}
-                                        <li class="nav-item">
-                                            <a class="nav-link" href="{% url 'login' %}">Zaloguj się</a>
-                                        </li>
-                                        {% endif %}
+                    {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="accountDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
+                            <li><a class="dropdown-item" href="{% url 'profile' %}">Mój profil</a></li>
+                            <li><a class="dropdown-item" href="{% url 'password_change' %}">Zmień hasło</a></li>
+                            <li><a class="dropdown-item" href="{% url 'dictionary:user_settings' %}">Ustawienia powiadomień</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'logout' %}" class="m-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">Wyloguj się</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Zaloguj się</a>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/auth/profile.html {% endcomment %}
+{% load i18n %}
+{% block title %}Mój profil - Kreator Słownika Kindle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row my-5">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Mój profil</h1>
+
+            {% if settings_row and not settings_row.email_verified %}
+                <div class="alert alert-warning">
+                    <strong>Twój adres e-mail nie został jeszcze potwierdzony.</strong>
+                    Sprawdź skrzynkę — wysłaliśmy do Ciebie wiadomość z linkiem
+                    aktywacyjnym. Po jego kliknięciu Twój adres zostanie potwierdzony.
+                </div>
+            {% endif %}
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Dane konta</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Login: <strong>{{ user.username }}</strong>
+                        (loginu nie można zmienić).
+                    </p>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        {% for field in form %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
+                                {% endif %}
+                                {% if field.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in field.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+
+                        <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Bezpieczeństwo</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <a href="{% url 'password_change' %}" class="btn btn-outline-primary">
+                            Zmień hasło
+                        </a>
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Dwuskładnikowe uwierzytelnianie (kod jednorazowy wysyłany
+                        e-mailem) będzie dostępne w jednej z kolejnych wersji.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

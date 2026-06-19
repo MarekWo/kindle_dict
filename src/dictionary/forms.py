@@ -488,6 +488,40 @@ class UserRegistrationForm(UserCreationForm):
         return email
 
 
+class ProfileEditForm(forms.ModelForm):
+    """Lets a logged-in user edit their first/last name and email."""
+
+    class Meta:
+        model = get_user_model()
+        fields = ('first_name', 'last_name', 'email')
+        labels = {
+            'first_name': _("Imię"),
+            'last_name': _("Nazwisko"),
+            'email': _("Adres e-mail"),
+        }
+        help_texts = {
+            'email': _("Zmiana adresu wymaga ponownego potwierdzenia — wyślemy nowy link aktywacyjny."),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = True
+            existing = field.widget.attrs.get('class', '')
+            field.widget.attrs['class'] = (existing + ' form-control').strip()
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        if not email:
+            raise forms.ValidationError(_("Adres e-mail jest wymagany."))
+        qs = get_user_model().objects.filter(email__iexact=email)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(_("Konto z tym adresem e-mail już istnieje."))
+        return email
+
+
 class UserApprovalForm(forms.Form):
     """Pick which app groups a freshly verified user should land in."""
 

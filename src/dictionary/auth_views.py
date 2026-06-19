@@ -10,16 +10,17 @@ from datetime import timedelta
 
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django import forms
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.urls import reverse, reverse_lazy
-from django.views.generic import FormView, TemplateView, View
+from django.views.generic import FormView, TemplateView, UpdateView, View
 
 from .captcha_utils import verify_captcha_response, get_captcha_context, is_captcha_enabled
-from .forms import UserRegistrationForm
+from .forms import UserRegistrationForm, ProfileEditForm
 from .models import UserSettings
 from .email_utils import (
     send_registration_verification_email,
@@ -170,3 +171,66 @@ class EmailVerificationView(View):
         return render(request, 'auth/email_verified.html', {
             'user': settings_row.user,
         })
+
+
+class ProfileEditView(LoginRequiredMixin, UpdateView):
+    """Lets a logged-in user edit their own first/last name and email.
+
+    Changing the email address re-triggers the verification flow from
+    Sprint B.2: email_verified flips back to False, a fresh token is
+    generated and a confirmation link is sent to the new address. The
+    user remains logged in — the email_verified flag is only consulted
+    by later sprints (password reset, email-2FA).
+    """
+
+    form_class = ProfileEditForm
+    template_name = 'auth/profile.html'
+    success_url = reverse_lazy('profile')
+
+    def get_object(self, queryset=None):
+        user = self.request.user
+        # Snapshot the original email here. ModelForm.is_valid() copies
+        # cleaned_data onto the instance *before* form_valid runs, so we
+        # cannot read user.email after that point and expect the pre-edit
+        # value.
+        self._original_email = (user.email or '').strip().lower()
+        return user
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['settings_row'] = UserSettings.objects.filter(user=self.request.user).first()
+        return context
+
+    def form_valid(self, form):
+        new_email = (form.cleaned_data.get('email') or '').strip().lower()
+        email_changed = self._original_email != new_email
+
+        response = super().form_valid(form)  # persists the User row
+
+        if email_changed:
+            user = self.object
+            token = secrets.token_urlsafe(32)
+            settings_row, _created = UserSettings.objects.get_or_create(user=user)
+            settings_row.email_verified = False
+            settings_row.email_verification_token = token
+            settings_row.email_verification_sent_at = timezone.now()
+            settings_row.save(update_fields=[
+                'email_verified',
+                'email_verification_token',
+                'email_verification_sent_at',
+                'updated_at',
+            ])
+
+            verify_url = self.request.build_absolute_uri(
+                reverse('verify_email', kwargs={'token': token})
+            )
+            send_registration_verification_email(user, verify_url)
+            messages.warning(
+                self.request,
+                _("Adres e-mail został zmieniony. Wysłaliśmy na nowy adres link "
+                  "aktywacyjny — prosimy potwierdzić nowy adres, klikając w link.")
+            )
+        else:
+            messages.success(self.request, _("Profil zaktualizowany."))
+
+        return response
