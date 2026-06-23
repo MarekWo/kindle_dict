@@ -16,6 +16,7 @@ from dictionary.auth_views import (
     RegistrationDoneView,
     EmailVerificationView,
     ProfileEditView,
+    PasswordResetView,
 )
 
 urlpatterns = [
@@ -41,6 +42,19 @@ urlpatterns = [
     path('accounts/password_change/done/', auth_views.PasswordChangeDoneView.as_view(
         template_name='auth/password_change_done.html',
     ), name='password_change_done'),
+
+    # Reset zapomnianego hasła
+    path('accounts/password_reset/', PasswordResetView.as_view(), name='password_reset'),
+    path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='auth/password_reset_done.html',
+    ), name='password_reset_done'),
+    path('accounts/reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='auth/password_reset_confirm.html',
+        success_url=reverse_lazy('password_reset_complete'),
+    ), name='password_reset_confirm'),
+    path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='auth/password_reset_complete.html',
+    ), name='password_reset_complete'),
 ]
 
 # Serve media files in development

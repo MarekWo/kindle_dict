@@ -706,6 +706,26 @@ def send_account_approved_email(user, login_url=None):
     return send_email(user.email, subject, html_content)
 
 
+def send_password_reset_email(user, reset_url):
+    """Email containing the password reset link for a verified account."""
+    display_name = (user.get_full_name() or user.username).strip()
+    subject = "Reset hasła w Bibliotece Słowników Kindle"
+    html_content = f"""
+    <p>Witaj {display_name},</p>
+    <p>Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta
+    <strong>{user.username}</strong> w serwisie
+    <strong>Biblioteka Słowników Kindle</strong>.</p>
+    <p>Aby ustawić nowe hasło, kliknij w poniższy link:</p>
+    <p><a href="{reset_url}">{reset_url}</a></p>
+    <p>Link jest ważny przez 24 godziny. Po jego użyciu (lub upływie terminu)
+    przestaje działać — w razie potrzeby zażądaj nowego.</p>
+    <p>Jeśli to nie Ty prosiłeś o reset hasła, po prostu zignoruj tę wiadomość —
+    Twoje obecne hasło pozostaje aktywne.</p>
+    <p>Pozdrawiamy,<br>System Kindle Dictionary Creator</p>
+    """
+    return send_email(user.email, subject, html_content)
+
+
 def send_account_rejected_email(email, username, reason=''):
     """Notify a user that their account request was rejected.
 

@@ -8,11 +8,15 @@ import logging
 import secrets
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 from django import forms
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -25,6 +29,7 @@ from .models import UserSettings
 from .email_utils import (
     send_registration_verification_email,
     send_admin_approval_notification,
+    send_password_reset_email,
 )
 
 logger = logging.getLogger(__name__)
@@ -234,3 +239,55 @@ class ProfileEditView(LoginRequiredMixin, UpdateView):
             messages.success(self.request, _("Profil zaktualizowany."))
 
         return response
+
+
+class PasswordResetRequestForm(forms.Form):
+    """Single field 'email' form used by PasswordResetView."""
+
+    email = forms.EmailField(
+        label=_("Adres e-mail"),
+        max_length=254,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'autocomplete': 'email'}),
+    )
+
+
+class PasswordResetView(FormView):
+    """Custom password reset request that uses the project's SMTP pipeline.
+
+    Django's built-in PasswordResetView ignores SMTPConfiguration and goes
+    through django.core.mail. To keep the SMTP setup in one place — the
+    runtime-configurable `SMTPConfiguration` row used by every other email
+    in the app — we issue the token ourselves and send the email through
+    `email_utils.send_email`.
+
+    A reset link is only issued to accounts that are active *and* have a
+    confirmed email address: a dormant or unverified account can be
+    targeted with a stolen password but should not provide a way to
+    bypass admin approval or hijack a contested address. To avoid leaking
+    which addresses exist, the success page is shown regardless of
+    whether the form's email matched anything.
+    """
+
+    form_class = PasswordResetRequestForm
+    template_name = 'auth/password_reset_form.html'
+    success_url = reverse_lazy('password_reset_done')
+
+    def form_valid(self, form):
+        email = (form.cleaned_data.get('email') or '').strip()
+        if email:
+            User = get_user_model()
+            recipients = User.objects.filter(
+                email__iexact=email,
+                is_active=True,
+                settings__email_verified=True,
+            )
+            for user in recipients:
+                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
+                reset_url = self.request.build_absolute_uri(
+                    reverse('password_reset_confirm', kwargs={'uidb64': uidb64, 'token': token})
+                )
+                send_password_reset_email(user, reset_url)
+                logger.info("Password reset link issued for user %s (id=%s)",
+                            user.username, user.id)
+        return super().form_valid(form)

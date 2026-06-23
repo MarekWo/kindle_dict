@@ -34,6 +34,7 @@
                         {% include 'includes/captcha.html' %}
 
                         <button type="submit" class="btn btn-primary">Zaloguj się</button>
+                        <a href="{% url 'password_reset' %}" class="btn btn-link">Zapomniałem hasła</a>
 
                         <input type="hidden" name="next" value="{{ next }}">
                     </form>

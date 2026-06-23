@@ -86,6 +86,9 @@ TIME_ZONE = env('TIME_ZONE', default='Europe/Warsaw')
 USE_I18N = True
 USE_TZ = True
 
+# Reset hasła: link wygasa po 24 godzinach
+PASSWORD_RESET_TIMEOUT = 86400
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
