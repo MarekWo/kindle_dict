@@ -63,11 +63,23 @@
                         <a href="{% url 'password_change' %}" class="btn btn-outline-primary">
                             Zmień hasło
                         </a>
+                        <a href="{% url 'two_factor_settings' %}" class="btn btn-outline-primary">
+                            Weryfikacja dwustopniowa (e-mail)
+                        </a>
                     </p>
-                    <p class="text-muted small mb-0">
-                        Dwuskładnikowe uwierzytelnianie (kod jednorazowy wysyłany
-                        e-mailem) będzie dostępne w jednej z kolejnych wersji.
-                    </p>
+                    {% if settings_row and settings_row.two_factor_enabled %}
+                        <p class="text-success small mb-0">
+                            Weryfikacja dwustopniowa jest <strong>włączona</strong>.
+                            Przy każdym logowaniu poprosimy o kod wysłany na Twój
+                            adres e-mail.
+                        </p>
+                    {% else %}
+                        <p class="text-muted small mb-0">
+                            Możesz włączyć dwuskładnikowe uwierzytelnianie — kod
+                            jednorazowy będziemy wysyłać Ci e-mailem przy każdym
+                            logowaniu.
+                        </p>
+                    {% endif %}
                 </div>
             </div>
         </div>

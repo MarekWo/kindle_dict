@@ -706,6 +706,23 @@ def send_account_approved_email(user, login_url=None):
     return send_email(user.email, subject, html_content)
 
 
+def send_two_factor_code(user, code):
+    """Email the one-time login code to the user when 2FA is enabled."""
+    display_name = (user.get_full_name() or user.username).strip()
+    subject = "Kod logowania w Bibliotece Słowników Kindle"
+    html_content = f"""
+    <p>Witaj {display_name},</p>
+    <p>Twój jednorazowy kod logowania do konta <strong>{user.username}</strong>:</p>
+    <p style="font-size: 1.4em; font-weight: bold; letter-spacing: 0.2em;">{code}</p>
+    <p>Wprowadź ten kod w formularzu, który pokazał się po wpisaniu hasła.
+    Kod jest ważny przez 10 minut.</p>
+    <p>Jeśli nie próbowałeś się zalogować, ktoś zna Twoje hasło — zalecamy
+    natychmiastową zmianę hasła w panelu „Mój profil".</p>
+    <p>Pozdrawiamy,<br>System Kindle Dictionary Creator</p>
+    """
+    return send_email(user.email, subject, html_content)
+
+
 def send_password_reset_email(user, reset_url):
     """Email containing the password reset link for a verified account."""
     display_name = (user.get_full_name() or user.username).strip()

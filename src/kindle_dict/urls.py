@@ -17,6 +17,9 @@ from dictionary.auth_views import (
     EmailVerificationView,
     ProfileEditView,
     PasswordResetView,
+    TwoFactorSettingsView,
+    OTPVerifyView,
+    OTPResendCodeView,
 )
 
 urlpatterns = [
@@ -55,6 +58,11 @@ urlpatterns = [
     path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(
         template_name='auth/password_reset_complete.html',
     ), name='password_reset_complete'),
+
+    # Email-based 2FA
+    path('accounts/two-factor/', TwoFactorSettingsView.as_view(), name='two_factor_settings'),
+    path('accounts/login/otp/', OTPVerifyView.as_view(), name='otp_verify'),
+    path('accounts/login/otp/resend/', OTPResendCodeView.as_view(), name='otp_resend'),
 ]
 
 # Serve media files in development

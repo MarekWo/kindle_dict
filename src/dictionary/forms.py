@@ -488,6 +488,29 @@ class UserRegistrationForm(UserCreationForm):
         return email
 
 
+class EmailOTPForm(forms.Form):
+    """Six-digit one-time code used by email-based 2FA."""
+
+    code = forms.CharField(
+        label=_("Kod jednorazowy"),
+        min_length=6,
+        max_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]{6}',
+            'autocomplete': 'one-time-code',
+            'autofocus': 'autofocus',
+        }),
+    )
+
+    def clean_code(self):
+        code = (self.cleaned_data.get('code') or '').strip()
+        if not code.isdigit() or len(code) != 6:
+            raise forms.ValidationError(_("Kod musi się składać z 6 cyfr."))
+        return code
+
+
 class ProfileEditForm(forms.ModelForm):
     """Lets a logged-in user edit their first/last name and email."""
 

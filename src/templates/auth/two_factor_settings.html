@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/auth/two_factor_settings.html {% endcomment %}
+{% load i18n %}
+{% block title %}Weryfikacja dwustopniowa - Kreator Słownika Kindle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row my-5">
+        <div class="col-lg-8 mx-auto">
+            <p>
+                <a href="{% url 'profile' %}">&larr; Wróć do profilu</a>
+            </p>
+            <h1 class="mb-4">Weryfikacja dwustopniowa (e-mail)</h1>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <p>
+                        Przy włączonej weryfikacji dwustopniowej każde
+                        logowanie wymaga oprócz hasła także jednorazowego
+                        kodu, który wyślemy na Twój adres e-mail
+                        <strong>{{ user.email }}</strong>.
+                    </p>
+                    <p>
+                        Status:
+                        {% if settings_row.two_factor_enabled %}
+                            <span class="badge bg-success">Włączone</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Wyłączone</span>
+                        {% endif %}
+                    </p>
+
+                    {% if awaiting_code %}
+                        <hr>
+                        <h5 class="mb-3">Wprowadź kod z e-maila</h5>
+                        <p class="text-muted small">
+                            Sprawdź skrzynkę {{ user.email }} — wysłaliśmy kod
+                            potwierdzający. Kod jest ważny przez 10 minut.
+                        </p>
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="confirm_enable">
+                            <div class="mb-3">
+                                <label for="{{ otp_form.code.id_for_label }}" class="form-label">{{ otp_form.code.label }}</label>
+                                {{ otp_form.code }}
+                                {% if otp_form.code.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in otp_form.code.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <button type="submit" class="btn btn-primary">Potwierdź i włącz</button>
+                        </form>
+                        <form method="post" class="mt-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="start_enable">
+                            <button type="submit" class="btn btn-link p-0">Wyślij nowy kod</button>
+                        </form>
+                    {% elif settings_row.two_factor_enabled %}
+                        <form method="post" onsubmit="return confirm('Na pewno wyłączyć weryfikację dwustopniową?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="disable">
+                            <button type="submit" class="btn btn-outline-danger">Wyłącz 2FA</button>
+                        </form>
+                    {% else %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="start_enable">
+                            <button type="submit" class="btn btn-primary">Włącz 2FA (wyślemy kod potwierdzający)</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

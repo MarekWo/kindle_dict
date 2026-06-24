@@ -107,6 +107,15 @@ SITE_URL = env('SITE_URL', default='http://localhost:8000')
 # Celery settings
 CELERY_BROKER_URL = f"redis://{env('REDIS_HOST', default='redis')}:{env('REDIS_PORT', default='6379')}/0"
 CELERY_RESULT_BACKEND = f"redis://{env('REDIS_HOST', default='redis')}:{env('REDIS_PORT', default='6379')}/0"
+
+# Cache: shared Redis store on db 1 (db 0 is Celery). Needed so short-lived
+# state — e.g. email-2FA OTP codes — is visible across gunicorn workers.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': f"redis://{env('REDIS_HOST', default='redis')}:{env('REDIS_PORT', default='6379')}/1",
+    },
+}
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% comment %} kindle_dict/src/templates/auth/otp_verify.html {% endcomment %}
+{% load i18n %}
+{% block title %}Wprowadź kod logowania - Kreator Słownika Kindle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row my-5">
+        <div class="col-lg-5 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Drugi krok logowania</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Wysłaliśmy na Twój adres e-mail jednorazowy kod logowania.
+                        Wpisz go poniżej, aby dokończyć logowanie.
+                    </p>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.code.id_for_label }}" class="form-label">{{ form.code.label }}</label>
+                            {{ form.code }}
+                            {% if form.code.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.code.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Zaloguj się</button>
+                    </form>
+
+                    <hr class="my-4">
+                    <form method="post" action="{% url 'otp_resend' %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-link p-0">Nie dostałem kodu — wyślij ponownie</button>
+                    </form>
+                    <p class="text-muted small mt-3 mb-0">
+                        Kod jest ważny przez 10 minut. Po 3 nieudanych próbach
+                        sesja logowania wygasa.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -6,13 +6,15 @@ Authentication views with CAPTCHA support.
 
 import logging
 import secrets
+import time
 from datetime import timedelta
 
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login as auth_login
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.utils.http import urlsafe_base64_encode
@@ -24,17 +26,44 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import FormView, TemplateView, UpdateView, View
 
 from .captcha_utils import verify_captcha_response, get_captcha_context, is_captcha_enabled
-from .forms import UserRegistrationForm, ProfileEditForm
+from .forms import UserRegistrationForm, ProfileEditForm, EmailOTPForm
 from .models import UserSettings
 from .email_utils import (
     send_registration_verification_email,
     send_admin_approval_notification,
     send_password_reset_email,
+    send_two_factor_code,
 )
 
 logger = logging.getLogger(__name__)
 
 EMAIL_VERIFICATION_TOKEN_TTL = timedelta(hours=48)
+
+# Email-2FA constants
+OTP_CACHE_TTL_SECONDS = 600          # 10 min for a fresh code to be valid
+OTP_SESSION_TIMEOUT_SECONDS = 900    # 15 min between password and OTP submit
+OTP_MAX_ATTEMPTS = 3
+OTP_RESEND_MIN_INTERVAL_SECONDS = 60
+
+
+def _generate_otp_code():
+    """Six-digit numeric code, e.g. '048213'."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def _issue_otp_for(user, request, *, purpose):
+    """Generate an OTP, cache it under (purpose, user.id), email it.
+
+    `purpose` distinguishes cache keys between the login flow ('login')
+    and the opt-in confirmation step ('enable_2fa') so the two never
+    collide if a user opens both at once.
+    """
+    code = _generate_otp_code()
+    cache_key = f"otp:{purpose}:{user.pk}"
+    cache.set(cache_key, code, timeout=OTP_CACHE_TTL_SECONDS)
+    send_two_factor_code(user, code)
+    logger.info("Issued OTP for user %s (purpose=%s)", user.username, purpose)
+    return cache_key
 
 
 class CaptchaAuthenticationForm(AuthenticationForm):
@@ -61,7 +90,7 @@ class CaptchaLoginView(LoginView):
         return context
 
     def form_valid(self, form):
-        """Verify CAPTCHA before login"""
+        """Verify CAPTCHA, then either log in or hand off to email-2FA."""
         # Verify CAPTCHA if enabled
         if is_captcha_enabled('login'):
             captcha_response = self.request.POST.get('cf-turnstile-response') or self.request.POST.get('g-recaptcha-response')
@@ -70,6 +99,22 @@ class CaptchaLoginView(LoginView):
                 context = self.get_context_data(form=form)
                 context['captcha_error'] = _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie.")
                 return self.render_to_response(context)
+
+        user = form.get_user()
+        try:
+            settings_row = user.settings
+        except UserSettings.DoesNotExist:
+            settings_row = None
+
+        if settings_row and settings_row.two_factor_enabled:
+            # Defer login until the OTP is verified. Park the user.id and the
+            # post-login redirect in the session; OTPVerifyView picks them up.
+            _issue_otp_for(user, self.request, purpose='login')
+            self.request.session['otp_pending_user_id'] = user.pk
+            self.request.session['otp_pending_started_at'] = int(time.time())
+            self.request.session['otp_pending_attempts'] = 0
+            self.request.session['otp_pending_next'] = self.get_success_url()
+            return redirect('otp_verify')
 
         return super().form_valid(form)
 
@@ -291,3 +336,176 @@ class PasswordResetView(FormView):
                 logger.info("Password reset link issued for user %s (id=%s)",
                             user.username, user.id)
         return super().form_valid(form)
+
+
+class TwoFactorSettingsView(LoginRequiredMixin, View):
+    """Toggle email-based 2FA for the logged-in user.
+
+    Three actions, all POST:
+    - 'start_enable'   — generate + email a confirmation code, show OTP form
+    - 'confirm_enable' — validate code, flip two_factor_enabled=True
+    - 'disable'        — flip two_factor_enabled=False (no confirmation)
+
+    GET shows the current state and the relevant button.
+    """
+
+    template_name = 'auth/two_factor_settings.html'
+    enable_cache_purpose = 'enable_2fa'
+
+    def get_settings(self):
+        settings_row, _created = UserSettings.objects.get_or_create(user=self.request.user)
+        return settings_row
+
+    def render(self, *, settings_row, otp_form=None, awaiting_code=False, message=None):
+        return render(self.request, self.template_name, {
+            'settings_row': settings_row,
+            'otp_form': otp_form or EmailOTPForm(),
+            'awaiting_code': awaiting_code,
+            'message': message,
+        })
+
+    def get(self, request):
+        return self.render(settings_row=self.get_settings())
+
+    def post(self, request):
+        settings_row = self.get_settings()
+        action = request.POST.get('action')
+
+        if action == 'start_enable':
+            if settings_row.two_factor_enabled:
+                messages.info(request, _("Email-2FA jest już włączone."))
+                return redirect('two_factor_settings')
+            _issue_otp_for(request.user, request, purpose=self.enable_cache_purpose)
+            messages.info(
+                request,
+                _("Wysłaliśmy kod potwierdzający na Twój adres e-mail. "
+                  "Wprowadź go, aby włączyć weryfikację dwustopniową.")
+            )
+            return self.render(settings_row=settings_row, awaiting_code=True)
+
+        if action == 'confirm_enable':
+            otp_form = EmailOTPForm(request.POST)
+            if not otp_form.is_valid():
+                return self.render(settings_row=settings_row, otp_form=otp_form, awaiting_code=True)
+            cache_key = f"otp:{self.enable_cache_purpose}:{request.user.pk}"
+            expected = cache.get(cache_key)
+            entered = otp_form.cleaned_data['code']
+            if not expected or not secrets.compare_digest(expected, entered):
+                otp_form.add_error('code', _("Nieprawidłowy lub wygasły kod. Wygeneruj nowy."))
+                return self.render(settings_row=settings_row, otp_form=otp_form, awaiting_code=True)
+            cache.delete(cache_key)
+            settings_row.two_factor_enabled = True
+            settings_row.save(update_fields=['two_factor_enabled', 'updated_at'])
+            messages.success(request, _("Weryfikacja dwustopniowa została włączona."))
+            return redirect('two_factor_settings')
+
+        if action == 'disable':
+            if settings_row.two_factor_enabled:
+                settings_row.two_factor_enabled = False
+                settings_row.save(update_fields=['two_factor_enabled', 'updated_at'])
+                messages.success(request, _("Weryfikacja dwustopniowa została wyłączona."))
+            return redirect('two_factor_settings')
+
+        messages.error(request, _("Nieznana akcja."))
+        return redirect('two_factor_settings')
+
+
+class OTPVerifyView(View):
+    """Second step of email-2FA login. Reads otp_pending_user_id from the
+    session (set by CaptchaLoginView), accepts the code, and logs the user
+    in if it matches."""
+
+    template_name = 'auth/otp_verify.html'
+    login_cache_purpose = 'login'
+
+    def get_pending_user(self, request):
+        user_id = request.session.get('otp_pending_user_id')
+        started = request.session.get('otp_pending_started_at')
+        if not user_id or not started:
+            return None
+        # Stale half-finished login? Force a fresh start.
+        if int(time.time()) - int(started) > OTP_SESSION_TIMEOUT_SECONDS:
+            self._clear(request)
+            return None
+        User = get_user_model()
+        return User.objects.filter(pk=user_id, is_active=True).first()
+
+    def _clear(self, request):
+        for key in ('otp_pending_user_id', 'otp_pending_started_at',
+                    'otp_pending_attempts', 'otp_pending_next',
+                    'otp_pending_resend_at'):
+            request.session.pop(key, None)
+
+    def get(self, request):
+        user = self.get_pending_user(request)
+        if user is None:
+            messages.error(request, _("Twoja sesja logowania wygasła. Zaloguj się ponownie."))
+            return redirect('login')
+        return render(request, self.template_name, {'form': EmailOTPForm()})
+
+    def post(self, request):
+        user = self.get_pending_user(request)
+        if user is None:
+            messages.error(request, _("Twoja sesja logowania wygasła. Zaloguj się ponownie."))
+            return redirect('login')
+
+        form = EmailOTPForm(request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, {'form': form})
+
+        cache_key = f"otp:{self.login_cache_purpose}:{user.pk}"
+        expected = cache.get(cache_key)
+        entered = form.cleaned_data['code']
+        attempts = int(request.session.get('otp_pending_attempts', 0)) + 1
+        request.session['otp_pending_attempts'] = attempts
+
+        if expected and secrets.compare_digest(expected, entered):
+            cache.delete(cache_key)
+            next_url = request.session.get('otp_pending_next') or '/'
+            self._clear(request)
+            auth_login(request, user)
+            return redirect(next_url)
+
+        if attempts >= OTP_MAX_ATTEMPTS:
+            cache.delete(cache_key)
+            self._clear(request)
+            messages.error(
+                request,
+                _("Przekroczono dopuszczalną liczbę prób. Zaloguj się ponownie.")
+            )
+            return redirect('login')
+
+        remaining = OTP_MAX_ATTEMPTS - attempts
+        form.add_error('code', _(
+            "Nieprawidłowy lub wygasły kod. Pozostałe próby: %(n)d."
+        ) % {'n': remaining})
+        return render(request, self.template_name, {'form': form})
+
+
+class OTPResendCodeView(View):
+    """POST-only: re-issue an OTP for the currently parked login attempt,
+    throttled to OTP_RESEND_MIN_INTERVAL_SECONDS to limit email spam."""
+
+    login_cache_purpose = 'login'
+
+    def post(self, request):
+        verify = OTPVerifyView()
+        user = verify.get_pending_user(request)
+        if user is None:
+            messages.error(request, _("Twoja sesja logowania wygasła. Zaloguj się ponownie."))
+            return redirect('login')
+
+        last_resend = request.session.get('otp_pending_resend_at')
+        now = int(time.time())
+        if last_resend and now - int(last_resend) < OTP_RESEND_MIN_INTERVAL_SECONDS:
+            wait = OTP_RESEND_MIN_INTERVAL_SECONDS - (now - int(last_resend))
+            messages.warning(
+                request,
+                _("Kolejny kod możesz wysłać za %(s)d sekund.") % {'s': wait}
+            )
+            return redirect('otp_verify')
+
+        _issue_otp_for(user, request, purpose=self.login_cache_purpose)
+        request.session['otp_pending_resend_at'] = now
+        messages.success(request, _("Nowy kod został wysłany na Twój adres e-mail."))
+        return redirect('otp_verify')
