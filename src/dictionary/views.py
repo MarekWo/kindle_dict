@@ -177,29 +177,36 @@ def get_new_tasks_count():
     return Task.objects.filter(status='new').count()
 
 class DictionarySuggestionCreateView(CreateView):
-    """View for anonymous users to submit dictionary suggestions"""
+    """View for users to submit dictionary suggestions.
+
+    Open to anonymous and authenticated users alike (B.7). For
+    authenticated users, author_name and email are prefilled from the
+    profile but remain editable. CAPTCHA is skipped when the request is
+    authenticated — bot signups are blocked at registration, not here.
+    """
     model = DictionarySuggestion
     form_class = DictionarySuggestionForm
     template_name = 'dictionary/suggest.html'
     success_url = reverse_lazy('home')
-    
-    def dispatch(self, request, *args, **kwargs):
-        """Check if user is not authenticated"""
-        if request.user.is_authenticated:
-            messages.info(request, _("Zalogowani użytkownicy nie mogą proponować słowników. Skontaktuj się z administratorem, aby uzyskać rolę Dictionary Creator."))
-            return redirect('home')
-        return super().dispatch(request, *args, **kwargs)
-    
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.request.user.is_authenticated:
+            initial.setdefault('author_name', self.request.user.get_full_name() or self.request.user.username)
+            initial.setdefault('email', self.request.user.email)
+        return initial
+
     def get_context_data(self, **kwargs):
-        """Add CAPTCHA context data"""
+        """Add CAPTCHA context data (only for anonymous visitors)."""
         context = super().get_context_data(**kwargs)
-        context.update(get_captcha_context('suggest'))
+        if not self.request.user.is_authenticated:
+            context.update(get_captcha_context('suggest'))
         return context
-    
+
     def form_valid(self, form):
         """Process the form if it's valid"""
-        # Verify CAPTCHA if enabled
-        if is_captcha_enabled('suggest'):
+        # Verify CAPTCHA if enabled — only for anonymous submissions
+        if not self.request.user.is_authenticated and is_captcha_enabled('suggest'):
             captcha_response = self.request.POST.get('cf-turnstile-response') or self.request.POST.get('g-recaptcha-response')
             if not verify_captcha_response(captcha_response):
                 form.add_error(None, _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie."))
@@ -233,20 +240,18 @@ class DictionarySuggestionCreateView(CreateView):
 
 
 class DictionaryChangeView(View):
-    """View for anonymous users to submit dictionary change proposals"""
+    """View for users to submit dictionary change proposals.
+
+    Open to anonymous and authenticated users alike (B.7). Profile data
+    is prefilled for authenticated users; CAPTCHA only applies to
+    anonymous submissions.
+    """
     template_name = 'dictionary/change.html'
-    
-    def dispatch(self, request, *args, **kwargs):
-        """Check if user is not authenticated"""
-        if request.user.is_authenticated:
-            messages.info(request, _("Zalogowani użytkownicy nie mogą proponować zmian w słownikach. Skontaktuj się z administratorem, aby uzyskać rolę Dictionary Edit."))
-            return redirect('home')
-        return super().dispatch(request, *args, **kwargs)
-    
+
     def get(self, request, *args, **kwargs):
         """Handle GET request"""
         dictionary = get_object_or_404(Dictionary, pk=kwargs['pk'])
-        
+
         # Wczytaj zawartość słownika
         initial_content = ""
         if dictionary.source_file:
@@ -256,24 +261,29 @@ class DictionaryChangeView(View):
             except Exception as e:
                 logger = logging.getLogger(__name__)
                 logger.error(f"Nie udało się odczytać pliku źródłowego: {e}")
-        
-        form = DictionaryChangeForm(initial={'content': initial_content})
-        
+
+        initial = {'content': initial_content}
+        if request.user.is_authenticated:
+            initial['author_name'] = request.user.get_full_name() or request.user.username
+            initial['email'] = request.user.email
+        form = DictionaryChangeForm(initial=initial)
+
         context = {
             'form': form,
             'dictionary': dictionary
         }
-        context.update(get_captcha_context('suggest'))  # Używamy tych samych ustawień CAPTCHA co dla propozycji słownika
-        
+        if not request.user.is_authenticated:
+            context.update(get_captcha_context('suggest'))
+
         return render(request, self.template_name, context)
-    
+
     def post(self, request, *args, **kwargs):
         """Handle POST request"""
         dictionary = get_object_or_404(Dictionary, pk=kwargs['pk'])
         form = DictionaryChangeForm(request.POST, request.FILES)
-        
-        # Verify CAPTCHA if enabled
-        if is_captcha_enabled('suggest'):  # Używamy tych samych ustawień CAPTCHA co dla propozycji słownika
+
+        # Verify CAPTCHA if enabled — only for anonymous submissions
+        if not request.user.is_authenticated and is_captcha_enabled('suggest'):
             captcha_response = request.POST.get('cf-turnstile-response') or request.POST.get('g-recaptcha-response')
             if not verify_captcha_response(captcha_response):
                 form.add_error(None, _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie."))
@@ -346,7 +356,8 @@ class DictionaryChangeView(View):
             'form': form,
             'dictionary': dictionary
         }
-        context.update(get_captcha_context('suggest'))
+        if not request.user.is_authenticated:
+            context.update(get_captcha_context('suggest'))
         return render(request, self.template_name, context)
 
 class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -965,29 +976,35 @@ class DictionaryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 
 class ContactMessageCreateView(CreateView):
-    """View for users to submit contact messages"""
+    """View for users to submit contact messages.
+
+    Open to anonymous and authenticated users alike (B.7). Profile data
+    is prefilled for authenticated users; CAPTCHA only applies to
+    anonymous submissions.
+    """
     model = ContactMessage
     form_class = ContactMessageForm
     template_name = 'dictionary/contact.html'
     success_url = reverse_lazy('home')
-    
-    def dispatch(self, request, *args, **kwargs):
-        """Check if user is not authenticated"""
-        if request.user.is_authenticated:
-            messages.info(request, _("Zalogowani użytkownicy nie mogą korzystać z formularza kontaktowego. Prosimy o bezpośredni kontakt z administratorem."))
-            return redirect('home')
-        return super().dispatch(request, *args, **kwargs)
-    
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.request.user.is_authenticated:
+            initial.setdefault('name', self.request.user.get_full_name() or self.request.user.username)
+            initial.setdefault('email', self.request.user.email)
+        return initial
+
     def get_context_data(self, **kwargs):
-        """Add CAPTCHA context data"""
+        """Add CAPTCHA context data (only for anonymous visitors)."""
         context = super().get_context_data(**kwargs)
-        context.update(get_captcha_context('contact'))
+        if not self.request.user.is_authenticated:
+            context.update(get_captcha_context('contact'))
         return context
-    
+
     def form_valid(self, form):
         """Process the form if it's valid"""
-        # Verify CAPTCHA if enabled
-        if is_captcha_enabled('contact'):
+        # Verify CAPTCHA if enabled — only for anonymous submissions
+        if not self.request.user.is_authenticated and is_captcha_enabled('contact'):
             captcha_response = self.request.POST.get('cf-turnstile-response') or self.request.POST.get('g-recaptcha-response')
             if not verify_captcha_response(captcha_response):
                 form.add_error(None, _("Weryfikacja CAPTCHA nie powiodła się. Spróbuj ponownie."))

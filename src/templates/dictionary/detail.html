@@ -140,7 +140,8 @@
                         {% if user.is_superuser or user|has_group:"Dictionary Admin" %}
                             <a href="{% url 'dictionary:delete' dictionary.id %}" class="btn btn-danger ms-2">Usuń słownik</a>
                         {% endif %}
-                        {% if not user.is_authenticated %}
+                        {# "Zaproponuj zmianę" hidden for users who can already use "Modyfikuj". #}
+                        {% if not user.is_superuser and not user|has_group:"Dictionary Admin" and not user|has_group:"Dictionary Edit" %}
                             <a href="{% url 'dictionary:change' dictionary.id %}" class="btn btn-outline-primary ms-2">Zaproponuj zmianę</a>
                         {% endif %}
                     </div>
