@@ -25,8 +25,9 @@
                             Tworzenie słowników jest dostępne tylko dla użytkowników z odpowiednimi uprawnieniami.
                         </div>
                     {% else %}
-                        <a href="{% url 'login' %}" class="btn btn-primary">Zaloguj się, aby utworzyć słownik</a>
+                        <a href="{% url 'register' %}" class="btn btn-primary">Zarejestruj się, aby tworzyć słowniki</a>
                         <a href="{% url 'dictionary:suggest' %}" class="btn btn-secondary">Zaproponuj słownik</a>
+                        <p class="mt-3 mb-0 small text-muted">Masz już konto? <a href="{% url 'login' %}">Zaloguj się</a></p>
                     {% endif %}
                 </div>
             </div>
