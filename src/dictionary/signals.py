@@ -64,16 +64,44 @@ def auto_delete_files_on_delete(sender, instance, **kwargs):
     except Exception as e:
         logger.error(f"Error deleting files for Dictionary {instance.id}: {e}")
 
+GENERATED_FILE_FIELDS = (
+    'html_file', 'opf_file', 'jpg_file', 'mobi_file', 'json_file', 'zip_file',
+)
+
+
+def _delete_replaced_generated_files(old_instance, instance, update_fields):
+    """Delete generated files that this save replaces with newer ones.
+
+    A rebuild stores fresh files under new names (the storage adds a random
+    suffix because the previous file still exists), so without this every
+    rebuild leaves the previous build behind on disk.
+    """
+    for field in GENERATED_FILE_FIELDS:
+        if update_fields is not None and field not in update_fields:
+            continue
+        old_file = getattr(old_instance, field)
+        new_file = getattr(instance, field)
+        if not old_file or not new_file or old_file.name == new_file.name:
+            continue
+        # Only delete once the replacement is on disk, so saving a stale
+        # in-memory instance can never wipe out the current build.
+        if not new_file.storage.exists(new_file.name):
+            continue
+        if old_file.storage.exists(old_file.name):
+            old_file.storage.delete(old_file.name)
+            logger.info(f"Deleted replaced {field} for Dictionary {instance.pk}: {old_file.name}")
+
+
 @receiver(pre_save, sender=Dictionary)
-def auto_delete_files_on_change(sender, instance, **kwargs):
+def auto_delete_files_on_change(sender, instance, update_fields=None, **kwargs):
     """
     Delete old files from filesystem when Dictionary instance is updated
     with new files.
     """
-    # Skip for new instances
-    if not instance.pk:
+    # Skip for new instances (the UUID pk is already set before the first save)
+    if instance._state.adding or not instance.pk:
         return
-    
+
     try:
         # Get old instance
         old_instance = Dictionary.objects.get(pk=instance.pk)
@@ -114,7 +142,10 @@ def auto_delete_files_on_change(sender, instance, **kwargs):
             if old_instance.zip_file and os.path.isfile(old_instance.zip_file.path):
                 os.remove(old_instance.zip_file.path)
                 instance.zip_file = None
-    
+
+        # Same source, new build: drop the files this build replaces
+        _delete_replaced_generated_files(old_instance, instance, update_fields)
+
     except Exception as e:
         logger.error(f"Error handling file changes for Dictionary {instance.id}: {e}")
 
